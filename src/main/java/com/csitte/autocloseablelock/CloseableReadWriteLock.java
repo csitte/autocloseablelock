@@ -1,14 +1,17 @@
 package com.csitte.autocloseablelock;
 
+import java.time.Duration;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 
 /**
  *  Handles {@link ReadWriteLock}-type locks
  *
  * @author sit
  */
-public class CloseableReadWriteLock
+public class CloseableReadWriteLock extends AbstractCloseableLock
 {
     private final CloseableLock closeableReadLock;
     private final CloseableLock closeableWriteLock;
@@ -16,27 +19,49 @@ public class CloseableReadWriteLock
     /**
      *  Constructor.
      *
-     *  uses {@ ReentrantReadWriteLock} as default lock implementation
+     *  Uses {@link ReentrantReadWriteLock} as default lock implementation
      */
     public CloseableReadWriteLock()
     {
-        this(new ReentrantReadWriteLock());
+        this(new ReentrantReadWriteLock(), null);
     }
 
     /**
      *  Constructor.
+     *
+     *  @param  info    description object about caller (used for logging)
+     *
+     *  Uses {@link ReentrantReadWriteLock} as default lock implementation
      */
-    public CloseableReadWriteLock(ReadWriteLock readWriteLock)
+    public CloseableReadWriteLock(Object info)
     {
-        this.closeableReadLock = new CloseableLock(readWriteLock.readLock());
-        this.closeableWriteLock = new CloseableLock(readWriteLock.writeLock());
+        this(new ReentrantReadWriteLock(), info);
     }
 
+    /**
+     *  Constructor.
+     *
+     *  @param  readWriteLock   use this {@link ReadWriteLock} as underlying lock
+     *  @param  info    description object about caller (used for logging)
+     */
+    public CloseableReadWriteLock(ReadWriteLock readWriteLock, Object info)
+    {
+        super(info);
+        this.closeableReadLock  = new CloseableLock(readWriteLock.readLock(),  getName()+".read");
+        this.closeableWriteLock = new CloseableLock(readWriteLock.writeLock(), getName()+".write");
+    }
+
+    /**
+     * @return the lock used for reading
+     */
     public CloseableLock getReadLock()
     {
         return closeableReadLock;
     }
 
+    /**
+     * @return the lock used for writing
+     */
     public CloseableLock getWriteLock()
     {
         return closeableWriteLock;
@@ -53,7 +78,7 @@ public class CloseableReadWriteLock
     /**
      * @return an {@link AutoCloseableLock} once the write-lock has been acquired.
      *
-     * @see {@link java.util.concurrent.locks.Lock#lock()}
+     * @see Lock#lock()
      */
     public AutoCloseableWriteLock writeLock()
     {
@@ -65,7 +90,7 @@ public class CloseableReadWriteLock
     /**
      * @return an {@link AutoCloseableLock} once the write-lock has been acquired.
      *
-     * @see {@link java.util.concurrent.locks.Lock#lockInterruptibly()}
+     * @see Lock#lockInterruptibly()
      */
     public AutoCloseableWriteLock writeLockInterruptibly()
     {
@@ -74,15 +99,25 @@ public class CloseableReadWriteLock
         return lock;
     }
 
-    public AutoCloseableLock tryReadLock(int timeoutInSeconds)
+    /**
+     *  @param timeout  0==return immediately or throw LockException if locked
+     *
+     *  @return an {@link AutoCloseableLock} once the read-lock has been acquired.
+     */
+    public AutoCloseableLock tryReadLock(Duration timeout)
     {
-        return closeableReadLock.tryLock(timeoutInSeconds);
+        return closeableReadLock.tryLock(timeout);
     }
 
-    public AutoCloseableWriteLock tryWriteLock(int timeoutInSeconds)
+    /**
+     *  @param timeout  0==return immediately or throw LockException if locked
+     *
+     *  @return an {@link AutoCloseableWriteLock} once the write-lock has been acquired.
+     */
+    public AutoCloseableWriteLock tryWriteLock(Duration timeout)
     {
         AutoCloseableWriteLockImpl lock = new AutoCloseableWriteLockImpl(this);
-        lock.tryWriteLock(timeoutInSeconds);
+        lock.tryWriteLock(timeout);
         return lock;
     }
 }
