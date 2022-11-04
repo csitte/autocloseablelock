@@ -14,7 +14,7 @@ public interface AutoCloseableLock extends AutoCloseable
     /**
      *  Wait for timeout.
      *
-     *  @param  timeout
+     *  @param  timeout     null or 0 means: no timeout
      */
     void wait(Duration timeout);
 
@@ -29,7 +29,7 @@ public interface AutoCloseableLock extends AutoCloseable
     boolean waitForCondition(BooleanSupplier fCondition, Duration timeout);
 
     /**
-     *  Wakes up threads which are waiting for the condition.
+     *  Wakes up thread(s) which are waiting for the condition.
      */
     void signalAll();
     void signal();
