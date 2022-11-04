@@ -1,21 +1,24 @@
 package test.com.csitte.autocloseablelock;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.csitte.autocloseablelock.AutoCloseableLock;
 import com.csitte.autocloseablelock.CloseableLock;
+import com.csitte.autocloseablelock.LockCondition.BooleanLockCondition;
 import com.csitte.autocloseablelock.LockException;
 
 import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
@@ -26,60 +29,42 @@ import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
  */
 class CloseableLockTest
 {
+    private static final Logger LOG = LogManager.getLogger(CloseableLockTest.class);
+
     private static final Duration SEC10 = Duration.ofSeconds(10);
     private static final Duration SEC2 = Duration.ofSeconds(2);
-
-    @Test
-    void testConstructor()
-    {
-        CloseableLock lock;
-
-        lock = new CloseableLock();
-        assertTrue(lock.getLock() instanceof ReentrantLock);
-        assertTrue(lock.getName().startsWith("test.com.csitte.autocloseablelock.CloseableLockTest."));
-
-        lock = new CloseableLock(null);
-        assertTrue(lock.getLock() instanceof ReentrantLock);
-        assertTrue(lock.getName().startsWith("test.com.csitte.autocloseablelock.CloseableLockTest."));
-
-        lock = new CloseableLock("dummy");
-        assertTrue(lock.getLock() instanceof ReentrantLock);
-        assertTrue(lock.getName().startsWith("dummy-lock-"));
-
-        lock = new CloseableLock(this);
-        assertTrue(lock.getLock() instanceof ReentrantLock);
-        assertTrue(lock.getName().startsWith("CloseableLockTest-lock-"));
-    }
 
     @ParameterizedTest
     @EnumSource(value = MODE.class, names = { "TRY_LOCK_ZERO", "TRY_LOCK_NULL"})
     void testTryLock(MODE mode)
     {
-        CloseableLock lock = new CloseableLock(mode.toString());
-        CloseableLock waitLock = new CloseableLock("wait");
+    	LOG.debug("-> testTryLock({})", mode);
+        CloseableLock lock = new CloseableLock();
+        CloseableLock waitLock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
         {
             ThreadObject thread = new ThreadObject(lock, mode, null); // no wait
+            LOG.debug("start thread & try to aquire loc (w/o wait), which goes wrong");
             thread.start(); // start thread & try to aquire lock (w/o wait), which goes wrong
-            boolean status = waitLock.waitForCondition(()->thread.isFinished(), "thread is finished", SEC10);
+            boolean status = waitLock.waitForCondition(()->thread.isFinished(), SEC10);
             assertTrue(status);
             assertNotNull(thread.getException());
 
             ThreadObject thread3 = new ThreadObject(lock, mode, null); // no wait
             thread3.start(); // start thread & try to aquire lock (w/o wait)
-            status = waitLock.waitForCondition(()->thread3.isFinished(), "thread is finished", null);
+            status = waitLock.waitForCondition(()->thread3.isFinished(), null);
             assertTrue(status);
             assertNotNull(thread3.getException());
         }
         ThreadObject thread2 = new ThreadObject(lock, mode, null); // no wait
         thread2.start(); // start thread & try to aquire lock (w/o wait)
-        boolean status = waitLock.waitForCondition(()->thread2.isFinished(), "thread is finished", SEC10);
+        boolean status = waitLock.waitForCondition(()->thread2.isFinished(), SEC10);
         assertTrue(status);
         assertNull(thread2.getException());
 
         ThreadObject thread4 = new ThreadObject(lock, mode, SEC2); // no wait
         thread4.start(); // start thread & try to aquire lock (w/o wait)
-        status = waitLock.waitForCondition(()->thread4.isFinished(), "thread is finished", SEC10);
+        status = waitLock.waitForCondition(()->thread4.isFinished(), SEC10);
         assertTrue(status);
         assertNull(thread4.getException());
     }
@@ -95,7 +80,7 @@ class CloseableLockTest
             thread = new ThreadObject(lock, MODE.TRY_LOCK_NEG, null); // wait w/o timeout
             thread.start();
             //- Wait (max 10s) until thread is started
-            status = lock.waitForCondition(()->thread.isStarted(), "thread is started", SEC10);
+            status = lock.waitForCondition(()->thread.isStarted(), SEC10);
             assertTrue(status);
             assertFalse(thread.isFinished()); // thread should be waiting
             //- Wait (max 10s) until thread is finished
@@ -108,12 +93,12 @@ class CloseableLockTest
     @Test
     void testTryLockTimeout()
     {
-        CloseableLock lock = new CloseableLock(this);
+        CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
         {
             ThreadObject thread = new ThreadObject(lock, MODE.TRY_LOCK_3S_TIMEOUT, null); // wait w/o timeout
             thread.start();
-            new CloseableLock(this).wait(Duration.ofSeconds(6)); // block lock for 6 seconds, timeout in thread after 3 sec
+            new CloseableLock().wait(Duration.ofSeconds(6)); // block lock for 6 seconds, timeout in thread after 3 sec
             assertTrue(thread.isFinished());
             assertNotNull(thread.getException());
         }
@@ -123,45 +108,40 @@ class CloseableLockTest
     void testLockConstructor()
     {
         ReentrantLock baseLock = new ReentrantLock();
-        CloseableLock lock;
-
-        lock = new CloseableLock(baseLock, this);
-        assertSame(lock.getLock(), baseLock);
-        assertTrue(lock.getName().startsWith("CloseableLockTest-lock-"));
+        new CloseableLock(baseLock);
     }
 
     @Test
     void testCondition()
     {
-        CloseableLock lock = new CloseableLock(this);
-        Condition condition1 = lock.getCondition();
-        Condition condition2 = lock.getCondition();
-        assertTrue(condition1 != null && condition1 == condition2);
+        CloseableLock lock = new CloseableLock();
+        BooleanLockCondition condition = new BooleanLockCondition(lock);
+        assertEquals(Boolean.FALSE, condition.getState());
     }
 
     @Test
     void testWait()
     {
-        CloseableLock lock = new CloseableLock(this);
-        assertTrue(lock.getName().startsWith("CloseableLockTest-lock-"));
+        CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
         {
             acl.wait(SEC2); // block lock for 2 seconds
+            assertThrows(LockException.class, () -> acl.wait(null));
+            assertThrows(LockException.class, () -> acl.wait(Duration.ofNanos(0L)));
         }
     }
 
     @Test
     void testSignal()
     {
-        CloseableLock lock = new CloseableLock(this);
-        assertTrue(lock.getName().startsWith("CloseableLockTest-lock-"));
+        CloseableLock lock = new CloseableLock();
         lock.signal();
         lock.signalAll();
         try (AutoCloseableLock acl = lock.lock())
         {
             acl.signal();
             acl.signalAll();
-            acl.getCondition();
+            new BooleanLockCondition(lock); // create condition
             acl.signal();
             acl.signalAll();
         }

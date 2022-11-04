@@ -32,7 +32,7 @@ Use it with the try-with-resources feature:
             }
         }
         
-When the scope is left, it is ensured that the lock will be released. Also if an optional condition was activated for the lock, waiting threads are signalled, so that they can continue.
+When the scope is left, it is ensured that the lock will be released.
         
 ## Try lock with timeout
 
@@ -52,7 +52,6 @@ If the lock cannot be aquired before the timeout duration expires, than a LockTi
 ## Wait
 
 The wait()-Method does what it's name says: waiting for the specified time.
-
 
         new CloseableLock().wait(Duration.ofSeconds(10));
         
@@ -100,3 +99,42 @@ The CloseableReadWriteLock() has the following locking-methods:
             AutoCloseableLock readLock()
             AutoCloseableLock tryReadLock(Duration)
             void downgradeToReadLock()
+            
+## LockCondition
+
+This class represents a state. It is bound to a lock. If the state of the LockCondition changes,
+this is signalled to all waiting threads. The setState()-method aquires the lock before changing the state.
+
+        CloseableLock myLock = new CloseableLock();
+        LockCondition<State> state = new LockCondition<>(myLock, State.INIT);
+
+        void doActivity()
+        {
+            state.setState(State.ACTIVE);
+            doSomethine();
+            state.setState(State.FINISHED);
+        }
+        
+        void waitUntilActivityHasFinished()
+        {
+            myLock.waitForCondition(()->state.getState()==State.FINISHED, timeout);    
+        }
+        
+## BooleanLockCondition
+
+This is a convenience class for LockCondition<Boolean>. It has the initial default value of FALSE.
+
+        CloseableLock myLock = new CloseableLock();
+        BooleanLockCondition finished = new BooleanLockCondition<>(myLock);
+
+        void doActivity()
+        {
+            doSomethine();
+            finished.setState(true);
+        }
+        
+        void waitUntilActivityHasFinished()
+        {
+            myLock.waitForCondition(()->finished.isTrue(), timeout);    
+        }
+

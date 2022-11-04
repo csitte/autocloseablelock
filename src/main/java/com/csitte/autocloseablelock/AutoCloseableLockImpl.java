@@ -3,22 +3,14 @@ package com.csitte.autocloseablelock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.function.BooleanSupplier;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
 
-
-public class AutoCloseableLockImpl implements AutoCloseableLock
+class AutoCloseableLockImpl implements AutoCloseableLock
 {
-    private static final Logger LOG = LogManager.getLogger(AutoCloseableLockImpl.class);
-
     private final CloseableLock lock;
     private static final long ONE_SECOND_IN_NANOS = 1000000000L;
 
-    private final String name;
 
     /**
      *  Constructor.
@@ -28,24 +20,12 @@ public class AutoCloseableLockImpl implements AutoCloseableLock
     public AutoCloseableLockImpl(CloseableLock lock)
     {
         this.lock = lock;
-
-        name = lock.getName() + '#' + lock.getNextLockIndex();
-        LOG.debug("{} aquired", name);
-        ThreadContext.push(name);
-    }
-
-    @Override
-    public String getName()
-    {
-        return name;
     }
 
     @Override
     public void close()
     {
         lock.close();
-        ThreadContext.pop();
-        LOG.debug("{} released", name);
     }
 
     /**
@@ -78,9 +58,9 @@ public class AutoCloseableLockImpl implements AutoCloseableLock
     {
         if (timeout == null || timeout.isZero())
         {
-            throw new LockException(getName() + " - invalid timeout value: " + timeout);
+            throw new LockException("invalid timeout value: " + timeout);
         }
-        waitForCondition(()->false, "timeout", timeout);
+        waitForCondition(()->false, timeout);
     }
 
     /**
@@ -99,27 +79,11 @@ public class AutoCloseableLockImpl implements AutoCloseableLock
     @Override
     public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
     {
-        return waitForCondition(fCondition, "", timeout);
-    }
-
-    /**
-     *  Wait for condition to become true or timeout.
-     *
-     *  Returns immediately if condition is met.
-     *
-     *  @see Condition#await()
-     *  @see Condition#awaitNanos(long)
-     *
-     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
-     *  @param  text        describes the condition
-     *  @param  timeout     null or 0 means: no timeout
-     *
-     *  @return true == condition met; false == timeout or interrupt occured
-     */
-    @Override
-    public boolean waitForCondition(BooleanSupplier fCondition, String text, Duration timeout)
-    {
-        LOG.debug("{}.waitForCondition(\"{}\",{})...", getName(), text, timeout);
+        if (fCondition.getAsBoolean()) // test condition
+        {
+            return true;
+        }
+        //- calculate end of wait if valid timeout parameter is available
         Instant startOfWait = Instant.now();
         Instant endOfWait = null;
         if (timeout != null && !timeout.isZero() && !timeout.isNegative())
@@ -128,54 +92,31 @@ public class AutoCloseableLockImpl implements AutoCloseableLock
         }
         try
         {
-            if (fCondition.getAsBoolean()) // condition already true?
-            {
-                Duration elapsedTime = Duration.between(startOfWait, Instant.now());
-                LOG.debug("{} waitForCondition(\"{}\") = true after {}", getName(), text, elapsedTime);
-                return true;
-            }
-            boolean result = true;
-            long nanos = ONE_SECOND_IN_NANOS;
             do
             {
+            	long nanos = ONE_SECOND_IN_NANOS; // default wait-interval
                 if (endOfWait != null)
                 {
-                    long remainingWaitTime = Duration.between(Instant.now(), endOfWait).toNanos();
+                	Instant now = Instant.now();
+                    long remainingWaitTime = Duration.between(now, endOfWait).toNanos();
                     if (remainingWaitTime <= 0)
                     {
-                        result = false; // timeout
-                        break;
+                        return false; // timeout
                     }
-                    if (remainingWaitTime < nanos) // wait max 1 sec
+                    if (remainingWaitTime < ONE_SECOND_IN_NANOS) // wait less than default interval?
                     {
                         nanos = remainingWaitTime;
                     }
                 }
-                LOG.debug("{}.waitForCondition(\"{}\",{})...", getName(), text, Duration.ofNanos(nanos));
-                nanos = getCondition().awaitNanos(nanos);
+                lock.getOrCreateCondition().awaitNanos(nanos);
             }
-            while (!fCondition.getAsBoolean());
-
-            Duration elapsedTime = Duration.between(startOfWait, Instant.now());
-            LOG.debug("{} waitForCondition(\"{}\") = {} after {}", getName(), text, result, elapsedTime);
-            return result;
+            while (!fCondition.getAsBoolean()); // test condition
+            return true;
         }
         catch (InterruptedException x)
         {
             Thread.currentThread().interrupt();
-            throw new LockException(getName() + " waitForCondition(\"" + text + "\") interrupted", x);
+            throw new LockException("interrupted", x);
         }
-    }
-
-    /**
-     *  @return Condition instance that is bound to this Lock.
-     *          The condition is only created on the first call to this method
-     *
-     *  @see Lock#newCondition()
-     */
-    @Override
-    public Condition getCondition()
-    {
-        return lock.getOrCreateCondition();
     }
 }

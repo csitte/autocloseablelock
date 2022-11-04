@@ -8,10 +8,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -20,10 +16,8 @@ import org.apache.logging.log4j.Logger;
  * It does not implement the Lock interface in order to ensure
  * that it can only be used through the try-with-resources mechanism.
 */
-public class CloseableLock extends AbstractCloseableLock
+public class CloseableLock
 {
-    private static final Logger LOG = LogManager.getLogger(CloseableLock.class);
-
     /**
      * The internal lock to use.
      */
@@ -31,7 +25,7 @@ public class CloseableLock extends AbstractCloseableLock
 
     /**
      *  Optional {@link Condition}-object.
-     *  Will be created on the first call to {@link #getCondition()}.
+     *  Will be created only on demand.
      */
     private Condition condition;
 
@@ -43,19 +37,7 @@ public class CloseableLock extends AbstractCloseableLock
      */
     public CloseableLock()
     {
-        this(new ReentrantLock(), null);
-    }
-
-    /**
-     *  Constructor.
-     *
-     *  Uses {@link ReentrantLock} as underlying lock.
-     *
-     *  @param  info    description object about caller (used for logging)
-     */
-    public CloseableLock(Object info)
-    {
-        this(new ReentrantLock(), info);
+        this(new ReentrantLock());
     }
 
     /**
@@ -64,18 +46,9 @@ public class CloseableLock extends AbstractCloseableLock
      *  @param  lock    the internal lock object to use
      *  @param  info    info-object (used for logging)
      */
-    public CloseableLock(Lock lock, Object info)
+    public CloseableLock(Lock lock)
     {
-        super(info);
         this.myLock = lock;
-    }
-
-    /**
-     *  @return the internal lock
-     */
-    public Lock getLock()
-    {
-        return myLock;
     }
 
     /**
@@ -83,7 +56,7 @@ public class CloseableLock extends AbstractCloseableLock
      *
      * If the lock is not available then the current thread becomes disabled
      * for thread scheduling purposes and lies dormant until the lock has been acquired.
-     *
+j     *
      * @return an {@link AutoCloseableLock} once the lock has been acquired
      *         which automatically unlocks the lock if used in an try-with-resources situation.
      *
@@ -92,7 +65,6 @@ public class CloseableLock extends AbstractCloseableLock
      */
     public AutoCloseableLock lock()
     {
-        LOG.debug("{}.lock()...", name);
         myLock.lock();
         return new AutoCloseableLockImpl(this);
     }
@@ -108,14 +80,13 @@ public class CloseableLock extends AbstractCloseableLock
     {
         try
         {
-            LOG.debug("{}.lockInterruptibly()...", name);
             myLock.lockInterruptibly();
             return new AutoCloseableLockImpl(this);
         }
         catch (InterruptedException x)
         {
             Thread.currentThread().interrupt();
-            throw new LockException(name, x);
+            throw new LockException(x);
         }
     }
 
@@ -136,14 +107,13 @@ public class CloseableLock extends AbstractCloseableLock
      */
     public AutoCloseableLock tryLock(Duration timeout)
     {
-        LOG.debug("{}.tryLock({})...", name, timeout);
         try
         {
             if (timeout == null || timeout.isZero())
             {
                 if (!myLock.tryLock()) // is locked?
                 {
-                    throw new LockException(name + " not aquired"); // no wait
+                    throw new LockException("not aquired"); // no wait
                 }
             }
             else if (timeout.isNegative())
@@ -161,19 +131,22 @@ public class CloseableLock extends AbstractCloseableLock
                     remainingWaitTime = timeout.minus(elapsedTime);
                     if (remainingWaitTime.isZero() || remainingWaitTime.isNegative())
                     {
-                        LOG.debug("{} timeout after {}", name, elapsedTime);
-                        throw new LockTimeoutException(name, elapsedTime);
+                        throw new LockTimeoutException(elapsedTime);
                     }
-                    LOG.debug("{} wakeup after {}", name, elapsedTime);
                 }
             }
         }
         catch (InterruptedException x)
         {
             Thread.currentThread().interrupt();
-            throw new LockException(name, x);
+            throw new LockException(x);
         }
         return new AutoCloseableLockImpl(this);
+    }
+
+    public AutoCloseableLock tryLock(int timeoutInSeconds)
+    {
+        return tryLock(Duration.ofSeconds(timeoutInSeconds));
     }
 
     /**
@@ -190,9 +163,9 @@ public class CloseableLock extends AbstractCloseableLock
     {
         if (timeout == null || timeout.isZero())
         {
-            throw new LockException(name + " - invalid timeout value: " + timeout);
+            throw new LockException("invalid timeout value: " + timeout);
         }
-        waitForCondition(()->false, "timeout", timeout);
+        waitForCondition(()->false, timeout);
     }
 
     /**
@@ -204,51 +177,15 @@ public class CloseableLock extends AbstractCloseableLock
      *  @see Condition#awaitNanos(long)
      *
      *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
-     *  @param  text        describes the condition (for logging purposes)
-     *  @param  timeout     null or 0 means: no timeout
-     *
-     *  @return true == condition met; false == timeout or interrupt occured
-     */
-    public boolean waitForCondition(BooleanSupplier fCondition, String text, Duration timeout)
-    {
-        try (AutoCloseableLock conditionLock = lock())
-        {
-            return conditionLock.waitForCondition(fCondition, text, timeout);
-        }
-    }
-
-    /**
-     *  Wait for condition to become true or timeout.
-     *
-     *  Returns immediately if condition is met.
-     *
-     *  @see Condition#await()
-     *  @see Condition#awaitNanos(long)
-     *
-     *  @param  fCondition  Represents a {@link Supplier} of {@code boolean}-valued condition results
      *  @param  timeout     null or 0 means: no timeout
      *
      *  @return true == condition met; false == timeout or interrupt occured
      */
     public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
     {
-        try (AutoCloseableLock conditionLock = lock())
+        try (AutoCloseableLock autoCloseableLock = lock())
         {
-            return conditionLock.waitForCondition(fCondition, "", timeout);
-        }
-    }
-
-    /**
-     *  @return Condition instance that is bound to this Lock.
-     *          The condition is created on the first call to this method
-     *
-     *  @see Lock#newCondition()
-     */
-    public Condition getCondition()
-    {
-        try (AutoCloseableLock conditionLock = lock())
-        {
-            return getOrCreateCondition();
+            return autoCloseableLock.waitForCondition(fCondition, timeout);
         }
     }
 
@@ -262,7 +199,6 @@ public class CloseableLock extends AbstractCloseableLock
     {
         if (condition == null)
         {
-            LOG.debug("{} create condition", getName());
             condition = myLock.newCondition();
         }
         return condition;
@@ -275,7 +211,7 @@ public class CloseableLock extends AbstractCloseableLock
      */
     public void signalAll()
     {
-        try (AutoCloseableLock conditionLock = lock())
+        try (AutoCloseableLock autoCloseableLock = lock())
         {
             signalAllCondition();
         }
@@ -291,7 +227,6 @@ public class CloseableLock extends AbstractCloseableLock
         if (condition != null)
         {
             //- only if condition is in use
-            LOG.debug("{} signalAll", getName());
             condition.signalAll();
         }
     }
@@ -303,7 +238,7 @@ public class CloseableLock extends AbstractCloseableLock
      */
     public void signal()
     {
-        try (AutoCloseableLock conditionLock = lock())
+        try (AutoCloseableLock autoCloseableLock = lock())
         {
             signalCondition();
         }
@@ -322,22 +257,15 @@ public class CloseableLock extends AbstractCloseableLock
         if (condition != null)
         {
             //- only if condition is in use
-            LOG.debug("{} signal()", getName());
             condition.signal();
         }
     }
 
     /**
-     *  Wake up all waiting threads and release the lock.
-     *
-     * @see Condition#signalAll()
+     *  Release the lock.
      */
     protected void close()
     {
-        if (condition != null)
-        {
-            condition.signalAll();
-        }
         myLock.unlock();
     }
 }

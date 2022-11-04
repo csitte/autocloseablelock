@@ -11,31 +11,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author sit
  */
-public class CloseableReadWriteLock extends AbstractCloseableLock
+public class CloseableReadWriteLock
 {
     private final CloseableLock closeableReadLock;
     private final CloseableLock closeableWriteLock;
 
     /**
-     *  Constructor.
+     *  Default Constructor.
      *
      *  Uses {@link ReentrantReadWriteLock} as default lock implementation
      */
     public CloseableReadWriteLock()
     {
-        this(new ReentrantReadWriteLock(), null);
-    }
-
-    /**
-     *  Constructor.
-     *
-     *  @param  info    description object about caller (used for logging)
-     *
-     *  Uses {@link ReentrantReadWriteLock} as default lock implementation
-     */
-    public CloseableReadWriteLock(Object info)
-    {
-        this(new ReentrantReadWriteLock(), info);
+        this(new ReentrantReadWriteLock());
     }
 
     /**
@@ -44,11 +32,10 @@ public class CloseableReadWriteLock extends AbstractCloseableLock
      *  @param  readWriteLock   use this {@link ReadWriteLock} as underlying lock
      *  @param  info    description object about caller (used for logging)
      */
-    public CloseableReadWriteLock(ReadWriteLock readWriteLock, Object info)
+    public CloseableReadWriteLock(ReadWriteLock readWriteLock)
     {
-        super(info);
-        this.closeableReadLock  = new CloseableLock(readWriteLock.readLock(),  getName()+".read");
-        this.closeableWriteLock = new CloseableLock(readWriteLock.writeLock(), getName()+".write");
+        this.closeableReadLock  = new CloseableLock(readWriteLock.readLock());
+        this.closeableWriteLock = new CloseableLock(readWriteLock.writeLock());
     }
 
     /**

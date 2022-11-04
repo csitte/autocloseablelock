@@ -2,10 +2,8 @@ package test.com.csitte.autocloseablelock;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
-import java.util.concurrent.locks.Condition;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +12,7 @@ import com.csitte.autocloseablelock.AutoCloseableWriteLock;
 import com.csitte.autocloseablelock.AutoCloseableWriteLockImpl;
 import com.csitte.autocloseablelock.CloseableLock;
 import com.csitte.autocloseablelock.CloseableReadWriteLock;
+import com.csitte.autocloseablelock.LockCondition.BooleanLockCondition;
 import com.csitte.autocloseablelock.LockException;
 
 
@@ -31,14 +30,12 @@ class CloseableReadWriteLockTest
     {
         CloseableReadWriteLock lock;
         lock = new CloseableReadWriteLock();
-        assertTrue(lock.getName().startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
         CloseableLock readLock = lock.getReadLock();
         assertNotNull(readLock);
         CloseableLock writeLock = lock.getWriteLock();
         assertNotNull(writeLock);
 
-        lock = new CloseableReadWriteLock(this);
-        assertTrue(lock.getName().startsWith("CloseableReadWriteLockTest-lock-"));
+        lock = new CloseableReadWriteLock();
     }
 
     @Test
@@ -47,9 +44,6 @@ class CloseableReadWriteLockTest
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableLock acl = lock.readLock())
         {
-            String name = acl.getName();
-            assertTrue(name.startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest.")
-                            && name.indexOf(".read-lock-") > 0);
         }
     }
 
@@ -59,9 +53,6 @@ class CloseableReadWriteLockTest
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableLock acl = lock.tryReadLock(SEC10))
         {
-            String name = acl.getName();
-            assertTrue(name.startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest.")
-                            && name.indexOf(".read-lock-") > 0);
         }
     }
 
@@ -71,8 +62,6 @@ class CloseableReadWriteLockTest
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
         {
-            String name = acwl.getName();
-            assertTrue(name.startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
             acwl.downgradeToReadLock();
         }
         try (AutoCloseableWriteLock acwl = lock.writeLockInterruptibly())
@@ -87,8 +76,6 @@ class CloseableReadWriteLockTest
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLockInterruptibly())
         {
-            String name = acwl.getName();
-            assertTrue(name.startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
         }
     }
 
@@ -96,11 +83,8 @@ class CloseableReadWriteLockTest
     void testTryWriteLock()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
-        assertTrue(lock.getName().startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
         try (AutoCloseableWriteLock acwl = lock.tryWriteLock(SEC10))
         {
-            String name = acwl.getName();
-            assertTrue(name.startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
             acwl.downgradeToReadLock();
         }
     }
@@ -109,7 +93,6 @@ class CloseableReadWriteLockTest
     void testWait()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
-        assertTrue(lock.getName().startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
         try (AutoCloseableWriteLock acwl = lock.writeLock())
         {
             acwl.wait(SEC2); // block lock for 2 seconds
@@ -124,13 +107,13 @@ class CloseableReadWriteLockTest
         {
             boolean result = acwl.waitForCondition(()->false, SEC2);
             assertFalse(result);
-            result = acwl.waitForCondition(()->false, "false", SEC2);
+            result = acwl.waitForCondition(()->false, SEC2);
             assertFalse(result);
             acwl.downgradeToReadLock();
             LockException lockException = null;
             try
             {
-                result = acwl.waitForCondition(()->false, "false", SEC2);
+                result = acwl.waitForCondition(()->false, SEC2);
             }
             catch (LockException x)
             {
@@ -148,7 +131,7 @@ class CloseableReadWriteLockTest
         {
             acwl.signal();
             acwl.signalAll();
-            acwl.getCondition();
+            new BooleanLockCondition(lock.getWriteLock());
             acwl.signal();
             acwl.signalAll();
             acwl.downgradeToReadLock();
@@ -171,9 +154,7 @@ class CloseableReadWriteLockTest
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
         {
-            Condition condition1 = acwl.getCondition();
-            Condition condition2 = acwl.getCondition();
-            assertTrue(condition1 != null && condition1 == condition2);
+            new BooleanLockCondition(lock.getWriteLock());
         }
 
     }
@@ -183,7 +164,6 @@ class CloseableReadWriteLockTest
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         AutoCloseableWriteLock acwl = new AutoCloseableWriteLockImpl(lock);
-        assertTrue(acwl.getName().startsWith("test.com.csitte.autocloseablelock.CloseableReadWriteLockTest."));
         acwl.close();
     }
 }

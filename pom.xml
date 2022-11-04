@@ -39,7 +39,6 @@
     <tag>HEAD</tag>
   </scm>
   
-  <!-- mvn clean deploy -Prelease -->
   <profiles>
     <profile>
       <id>release</id>
@@ -135,18 +134,6 @@
   </properties>
   
   <dependencies>
-    <!-- Logging -->
-    <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-api</artifactId>
-        <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${log4j.version}</version>
-        <scope>test</scope>
-    </dependency>
     <!-- Test -->
     <dependency>
         <groupId>org.junit.jupiter</groupId>
@@ -154,6 +141,18 @@
         <version>${junit.jupiter.version}</version>
         <scope>test</scope>
     </dependency>    
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>${log4j.version}</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j.version}</version>
+        <scope>test</scope>
+    </dependency>
   </dependencies>
   
 </project>  

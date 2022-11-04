@@ -1,12 +1,7 @@
 package com.csitte.autocloseablelock;
 
 import java.time.Duration;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.function.BooleanSupplier;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 
 /**
@@ -17,14 +12,10 @@ import org.apache.logging.log4j.Logger;
 */
 public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
 {
-    private static final Logger LOG = LogManager.getLogger(AutoCloseableWriteLockImpl.class);
-
     private CloseableReadWriteLock readWriteLock;
 
     private AutoCloseableLock autoCloseableReadLock;
     private AutoCloseableLock autoCloseableWriteLock;
-
-    private final String name;
 
     private static final String TXT_INVALID_STATE = "invalid state";
 
@@ -36,26 +27,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
      */
     public AutoCloseableWriteLockImpl(CloseableReadWriteLock readWriteLock)
     {
-        this(readWriteLock, null);
-    }
-
-    /**
-     *  Constructor.
-     *
-     *  @param  readWriteLock   use this ReadWriteLock as basis
-     *  @param  info    info-object (used for logging)
-     */
-    public AutoCloseableWriteLockImpl(CloseableReadWriteLock readWriteLock, Object info)
-    {
         this.readWriteLock = readWriteLock;
-        name = readWriteLock.getName() + '#' + readWriteLock.getNextLockIndex();
-        LOG.debug("{} created", name);
-    }
-
-    @Override
-    public String getName()
-    {
-        return name;
     }
 
     void writeLock()
@@ -97,9 +69,9 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         }
         if (timeout == null || timeout.isZero())
         {
-            throw new LockException(autoCloseableWriteLock.getName() + " - invalid timeout value: " + timeout);
+            throw new LockException("invalid timeout value: " + timeout);
         }
-        autoCloseableWriteLock.waitForCondition(()->false, "false", timeout);
+        autoCloseableWriteLock.waitForCondition(()->false, timeout);
     }
 
     @Override
@@ -124,16 +96,6 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         autoCloseableReadLock = readWriteLock.getReadLock().lockInterruptibly();
         autoCloseableWriteLock.close();
         autoCloseableWriteLock = null;
-    }
-
-    @Override
-    public boolean waitForCondition(BooleanSupplier fCondition, String text, Duration timeout)
-    {
-        if (autoCloseableWriteLock == null) // only usable with write-lock
-        {
-            throw new LockException(TXT_INVALID_STATE);
-        }
-        return autoCloseableWriteLock.waitForCondition(fCondition, text, timeout);
     }
 
     @Override
@@ -179,22 +141,5 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
             autoCloseableReadLock.close();
             autoCloseableReadLock = null;
         }
-    }
-
-    /**
-     *  @return Condition instance that is bound to current active write-lock.
-     *          read-lock's cannot provide Condition's.
-     *          The condition is only created on the first call to this method
-     *
-     *  @see Lock#newCondition()
-     */
-    @Override
-    public Condition getCondition()
-    {
-        if (autoCloseableWriteLock == null)
-        {
-            throw new LockException(TXT_INVALID_STATE);
-        }
-        return autoCloseableWriteLock.getCondition();
     }
 }
