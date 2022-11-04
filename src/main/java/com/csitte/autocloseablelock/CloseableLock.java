@@ -44,7 +44,6 @@ public class CloseableLock
      *  Constructor.
      *
      *  @param  lock    the internal lock object to use
-     *  @param  info    info-object (used for logging)
      */
     public CloseableLock(Lock lock)
     {
@@ -56,7 +55,7 @@ public class CloseableLock
      *
      * If the lock is not available then the current thread becomes disabled
      * for thread scheduling purposes and lies dormant until the lock has been acquired.
-j     *
+     *
      * @return an {@link AutoCloseableLock} once the lock has been acquired
      *         which automatically unlocks the lock if used in an try-with-resources situation.
      *

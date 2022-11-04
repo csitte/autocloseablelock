@@ -52,6 +52,8 @@ class AutoCloseableLockImpl implements AutoCloseableLock
 
     /**
      *  Wait for timeout.
+     *
+     *  @param  timeout  null or 0 means: no timeout
      */
     @Override
     public void wait(Duration timeout)

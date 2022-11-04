@@ -10,7 +10,8 @@ public class LockCondition<T>
     /**
      *  Constructor
      *
-     *  @param lock
+     *  @param lock         the associated lock
+     *  @param initalState  the initial state of this condition
      */
     public LockCondition(CloseableLock lock, T initalState)
     {
@@ -36,7 +37,7 @@ public class LockCondition<T>
     }
 
     /**
-     *  Get current lock condition
+     *  @return current lock condition
      */
     public T getState()
     {

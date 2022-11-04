@@ -30,7 +30,6 @@ public class CloseableReadWriteLock
      *  Constructor.
      *
      *  @param  readWriteLock   use this {@link ReadWriteLock} as underlying lock
-     *  @param  info    description object about caller (used for logging)
      */
     public CloseableReadWriteLock(ReadWriteLock readWriteLock)
     {

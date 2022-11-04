@@ -13,11 +13,18 @@ public interface AutoCloseableLock extends AutoCloseable
 
     /**
      *  Wait for timeout.
+     *
+     *  @param  timeout
      */
     void wait(Duration timeout);
 
     /**
      *  Wait for condition to become true or timeout.
+     *
+     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *  @param  timeout     null or 0 means: no timeout
+     *
+     *  @return true == condition met; false == timeout or interrupt occured
      */
     boolean waitForCondition(BooleanSupplier fCondition, Duration timeout);
 
