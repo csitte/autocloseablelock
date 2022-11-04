@@ -1,9 +1,9 @@
 package com.csitte.autocloseablelock;
 
 
-public class LockCondition<TYPE>
+public class LockCondition<T>
 {
-    private TYPE state;
+    private T state;
 
     private final CloseableLock lock;
 
@@ -12,7 +12,7 @@ public class LockCondition<TYPE>
      *
      *  @param lock
      */
-    public LockCondition(CloseableLock lock, TYPE initalState)
+    public LockCondition(CloseableLock lock, T initalState)
     {
         this.lock = lock;
         this.state = initalState;
@@ -26,7 +26,7 @@ public class LockCondition<TYPE>
      *
      *  @param state    new state
      */
-    public void setState(TYPE state)
+    public void setState(T state)
     {
         try (AutoCloseableLock autoCloseableLock = lock.lock())
         {
@@ -38,7 +38,7 @@ public class LockCondition<TYPE>
     /**
      *  Get current lock condition
      */
-    public TYPE getState()
+    public T getState()
     {
         try (AutoCloseableLock autoCloseableLock = lock.lock())
         {

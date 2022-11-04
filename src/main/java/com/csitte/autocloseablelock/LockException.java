@@ -6,6 +6,7 @@ public class LockException extends RuntimeException
 
     public LockException()
     {
+        // empty constructor
     }
 
     public LockException(String msg)
