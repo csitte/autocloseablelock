@@ -85,7 +85,6 @@ public class Activity
     /**
      *	Start activity.
      *
-     *	@param msg	activity-type text
      *  @return AutoCloseable object for try-with-resources functionality
      */
     public CloseableActivity startActivity()
