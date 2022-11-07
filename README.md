@@ -1,7 +1,19 @@
 # AutoCloseable Lock
 
-This package provides a wrapper for the `java.util.concurrent.locks.Lock` interface
-which can be used with the Java try-with-resources functionality.
+This package provides a simple wrapper for the [`java.util.concurrent.locks`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/package-summary.html) package
+which can be used with the Java try-with-resources functionality.</br>
+It also handles any `InterruptedException` during waits
+and also handles timeouts correctly,
+when '[spurious](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Condition.html)'-wakeups occur.
+
+```
+<!-- https://mvnrepository.com/artifact/com.csitte/autocloseablelock -->
+<dependency>
+    <groupId>com.csitte</groupId>
+    <artifactId>autocloseablelock</artifactId>
+    <version>1.0</version>
+</dependency>
+```
 
 ## Basic Usage
 
