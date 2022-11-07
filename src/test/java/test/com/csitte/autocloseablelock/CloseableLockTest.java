@@ -44,7 +44,7 @@ class CloseableLockTest
         try (AutoCloseableLock acl = lock.lock())
         {
             ThreadObject thread = new ThreadObject(lock, mode, null); // no wait
-            LOG.debug("start thread & try to aquire loc (w/o wait), which goes wrong");
+            LOG.debug("start thread & try to aquire lock (w/o wait), which goes wrong");
             thread.start(); // start thread & try to aquire lock (w/o wait), which goes wrong
             boolean status = waitLock.waitForCondition(()->thread.isFinished(), SEC10);
             assertTrue(status);
@@ -83,6 +83,7 @@ class CloseableLockTest
             status = lock.waitForCondition(()->thread.isStarted(), SEC10);
             assertTrue(status);
             assertFalse(thread.isFinished()); // thread should be waiting
+
             //- Wait (max 10s) until thread is finished
             status = lock.waitForCondition(()->thread.isFinished(), SEC10);
         }
@@ -98,8 +99,31 @@ class CloseableLockTest
         {
             ThreadObject thread = new ThreadObject(lock, MODE.TRY_LOCK_3S_TIMEOUT, null); // wait w/o timeout
             thread.start();
+            //- Wait (max 10s) until thread is started
+            boolean status = lock.waitForCondition(()->thread.isStarted(), SEC10);
+            assertTrue(status);
+
             new CloseableLock().wait(Duration.ofSeconds(6)); // block lock for 6 seconds, timeout in thread after 3 sec
             assertTrue(thread.isFinished());
+            assertNotNull(thread.getException());
+        }
+    }
+
+    @Test
+    void testWaitInterrupted()
+    {
+        CloseableLock lock = new CloseableLock();
+        try (AutoCloseableLock acl = lock.lock())
+        {
+            ThreadObject thread = new ThreadObject(lock, MODE.WAIT_5S, null); // wait 5sec
+            thread.start();
+            //- Wait (max 10s) until thread is started
+            boolean status = lock.waitForCondition(()->thread.isStarted(), SEC10);
+            assertTrue(status);
+
+            thread.interrupt();
+
+            acl.waitForCondition(() -> thread.isFinished(), SEC10);
             assertNotNull(thread.getException());
         }
     }
@@ -157,7 +181,8 @@ class CloseableLockTest
             TRY_LOCK_NULL,
             TRY_LOCK_ZERO,
             TRY_LOCK_NEG,
-            TRY_LOCK_3S_TIMEOUT;
+            TRY_LOCK_3S_TIMEOUT,
+            WAIT_5S;
         };
 
         private final MODE mode;
@@ -221,6 +246,9 @@ class CloseableLockTest
                         {
                         }
                         break;
+
+                    case WAIT_5S:
+                        lock.wait(Duration.ofSeconds(5));
 
                     default:
                         break;

@@ -70,7 +70,7 @@ public class DummyActivity extends Activity implements Runnable
 
 	public boolean isThreadRunning()
 	{
-	    return threadIsRunning.getState();
+	    return threadIsRunning.isTrue();
 	}
 
 	public boolean setShutdownRequest(boolean value)

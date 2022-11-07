@@ -35,12 +35,12 @@ class ActivityTest
 		activity.setShutdownRequest(false); // only for junit test
 
 	    LOG.debug("start of test-activity");
-		try (CloseableActivity ca = activity.startActivity("start of test-activity"))
+		try (CloseableActivity ca = activity.startActivity())
 		{
 			assertTrue(activity.isActive());
 			assertNull(activity.getEndOfActivity());
 
-			assertThrows(ActivityRuntimeException.class, () -> activity.startActivity("invalid second start"));
+			assertThrows(ActivityRuntimeException.class, () -> activity.startActivity());
 
 			activity.updateStatus("activity in progress");
 			assertEquals("activity in progress", activity.getStatus());
@@ -72,5 +72,6 @@ class ActivityTest
 		assertFalse(activity.isActive());
 		assertThrows(ActivityRuntimeException.class, () -> activity.close());
         assertThrows(ActivityRuntimeException.class, () -> activity.touch());
+        LOG.debug(activity.toString());
 	}
 }
