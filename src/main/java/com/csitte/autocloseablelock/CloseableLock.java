@@ -16,10 +16,10 @@ import java.util.function.BooleanSupplier;
  * It does not implement the Lock interface in order to ensure
  * that it can only be used through the try-with-resources mechanism.
 */
-public class CloseableLock
+public class CloseableLock implements AutoCloseableLock
 {
     /**
-     * The internal lock to use.
+     * The lock to use.
      */
     private final Lock myLock;
 
@@ -28,6 +28,8 @@ public class CloseableLock
      *  Will be created only on demand.
      */
     private Condition condition;
+
+    private static final long ONE_SECOND_IN_NANOS = 1000000000L;
 
 
     /**
@@ -43,7 +45,7 @@ public class CloseableLock
     /**
      *  Constructor.
      *
-     *  @param  lock    the internal lock object to use
+     *  @param  lock    the lock object to use
      */
     public CloseableLock(Lock lock)
     {
@@ -65,7 +67,7 @@ public class CloseableLock
     public AutoCloseableLock lock()
     {
         myLock.lock();
-        return new AutoCloseableLockImpl(this);
+        return this;
     }
 
     /**
@@ -80,7 +82,7 @@ public class CloseableLock
         try
         {
             myLock.lockInterruptibly();
-            return new AutoCloseableLockImpl(this);
+            return this;
         }
         catch (InterruptedException x)
         {
@@ -134,18 +136,13 @@ public class CloseableLock
                     }
                 }
             }
+            return this;
         }
         catch (InterruptedException x)
         {
             Thread.currentThread().interrupt();
             throw new LockException(x);
         }
-        return new AutoCloseableLockImpl(this);
-    }
-
-    public AutoCloseableLock tryLock(int timeoutInSeconds)
-    {
-        return tryLock(Duration.ofSeconds(timeoutInSeconds));
     }
 
     /**
@@ -165,27 +162,6 @@ public class CloseableLock
             throw new LockException("invalid timeout value: " + timeout);
         }
         waitForCondition(()->false, timeout);
-    }
-
-    /**
-     *  Wait for condition to become true or timeout.
-     *
-     *  Returns immediately if condition is met.
-     *
-     *  @see Condition#await()
-     *  @see Condition#awaitNanos(long)
-     *
-     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
-     *  @param  timeout     null or 0 means: no timeout
-     *
-     *  @return true == condition met; false == timeout or interrupt occured
-     */
-    public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
-    {
-        try (AutoCloseableLock autoCloseableLock = lock())
-        {
-            return autoCloseableLock.waitForCondition(fCondition, timeout);
-        }
     }
 
     /**
@@ -212,34 +188,11 @@ public class CloseableLock
     {
         try (AutoCloseableLock autoCloseableLock = lock())
         {
-            signalAllCondition();
-        }
-    }
-
-    /**
-     *  Wakes up all threads which are waiting for the condition.
-     *
-     *  @see Condition#signalAll()
-     */
-    protected void signalAllCondition()
-    {
-        if (condition != null)
-        {
-            //- only if condition is in use
-            condition.signalAll();
-        }
-    }
-
-    /**
-     *   Wakes up one waiting thread.
-     *
-     *   @see Condition#signal()
-     */
-    public void signal()
-    {
-        try (AutoCloseableLock autoCloseableLock = lock())
-        {
-            signalCondition();
+            if (condition != null)
+            {
+                //- only if condition is in use
+                condition.signalAll();
+            }
         }
     }
 
@@ -251,20 +204,83 @@ public class CloseableLock
      *
      *   @see Condition#signal()
      */
-    protected void signalCondition()
+    public void signal()
     {
-        if (condition != null)
+        try (AutoCloseableLock autoCloseableLock = lock())
         {
-            //- only if condition is in use
-            condition.signal();
+            if (condition != null)
+            {
+                //- only if condition is in use
+                condition.signal();
+            }
         }
     }
 
     /**
      *  Release the lock.
      */
-    protected void close()
+    @Override
+    public void close()
     {
         myLock.unlock();
+    }
+
+    /**
+     *  Wait for condition to become true or timeout.
+     *
+     *  Returns immediately if condition is met.
+     *
+     *  @see Condition#await()
+     *  @see Condition#awaitNanos(long)
+     *
+     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *  @param  timeout     null or 0 means: no timeout
+     *
+     *  @return true == condition met; false == timeout or interrupt occured
+     */
+    public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
+    {
+        if (fCondition.getAsBoolean()) // test condition
+        {
+            return true;
+        }
+        try (AutoCloseableLock autoCloseableLock = lock())
+        {
+            //- calculate end of wait if valid timeout parameter is available
+            Instant startOfWait = Instant.now();
+            Instant endOfWait = null;
+            if (timeout != null && !timeout.isZero() && !timeout.isNegative())
+            {
+                endOfWait = startOfWait.plus(timeout);
+            }
+            try
+            {
+                do
+                {
+                    long nanos = ONE_SECOND_IN_NANOS; // default wait-interval
+                    if (endOfWait != null)
+                    {
+                        Instant now = Instant.now();
+                        long remainingWaitTime = Duration.between(now, endOfWait).toNanos();
+                        if (remainingWaitTime <= 0)
+                        {
+                            return false; // timeout
+                        }
+                        if (remainingWaitTime < ONE_SECOND_IN_NANOS) // wait less than default interval?
+                        {
+                            nanos = remainingWaitTime;
+                        }
+                    }
+                    getOrCreateCondition().awaitNanos(nanos);
+                }
+                while (!fCondition.getAsBoolean()); // test condition
+                return true;
+            }
+            catch (InterruptedException x)
+            {
+                Thread.currentThread().interrupt();
+                throw new LockException("interrupted", x);
+            }
+        }
     }
 }

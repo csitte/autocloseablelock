@@ -48,7 +48,7 @@ public class LockConditionTest
                     {
                         LOG.debug("RUNNING");
                         assertEquals(State.INIT, stateCondition.getState());
-                        acl2.wait(Duration.ofSeconds(1L));
+                        lock.wait(Duration.ofSeconds(1L));
                         stateCondition.setRunning();
                         LOG.debug("wait for FINISHED");
                         lock.waitForCondition(() -> stateCondition.isFinished(), null);

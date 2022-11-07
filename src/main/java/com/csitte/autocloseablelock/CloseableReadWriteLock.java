@@ -13,8 +13,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class CloseableReadWriteLock
 {
-    private final CloseableLock closeableReadLock;
-    private final CloseableLock closeableWriteLock;
+    private final CloseableLock readLock;
+    private final CloseableLock writeLock;
 
     /**
      *  Default Constructor.
@@ -33,8 +33,8 @@ public class CloseableReadWriteLock
      */
     public CloseableReadWriteLock(ReadWriteLock readWriteLock)
     {
-        this.closeableReadLock  = new CloseableLock(readWriteLock.readLock());
-        this.closeableWriteLock = new CloseableLock(readWriteLock.writeLock());
+        this.readLock  = new CloseableLock(readWriteLock.readLock());
+        this.writeLock = new CloseableLock(readWriteLock.writeLock());
     }
 
     /**
@@ -42,7 +42,7 @@ public class CloseableReadWriteLock
      */
     public CloseableLock getReadLock()
     {
-        return closeableReadLock;
+        return readLock;
     }
 
     /**
@@ -50,7 +50,7 @@ public class CloseableReadWriteLock
      */
     public CloseableLock getWriteLock()
     {
-        return closeableWriteLock;
+        return writeLock;
     }
 
     /**
@@ -58,7 +58,7 @@ public class CloseableReadWriteLock
      */
     public AutoCloseableLock readLock()
     {
-        return closeableReadLock.lock();
+        return readLock.lock();
     }
 
     /**
@@ -92,7 +92,7 @@ public class CloseableReadWriteLock
      */
     public AutoCloseableLock tryReadLock(Duration timeout)
     {
-        return closeableReadLock.tryLock(timeout);
+        return readLock.tryLock(timeout);
     }
 
     /**

@@ -32,7 +32,7 @@ public class LockCondition<T>
         try (AutoCloseableLock autoCloseableLock = lock.lock())
         {
             this.state = state;
-            autoCloseableLock.signalAll();
+            lock.signalAll();
         }
     }
 

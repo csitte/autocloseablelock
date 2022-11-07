@@ -71,7 +71,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         {
             throw new LockException("invalid timeout value: " + timeout);
         }
-        autoCloseableWriteLock.waitForCondition(()->false, timeout);
+        readWriteLock.getWriteLock().waitForCondition(()->false, timeout);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        return autoCloseableWriteLock.waitForCondition(fCondition, timeout);
+        return readWriteLock.getWriteLock().waitForCondition(fCondition, timeout);
     }
 
     @Override
@@ -115,7 +115,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableWriteLock.signalAll();
+        readWriteLock.getWriteLock().signalAll();
     }
 
     @Override
@@ -125,7 +125,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableWriteLock.signal();
+        readWriteLock.getWriteLock().signal();
     }
 
     @Override
