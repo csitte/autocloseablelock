@@ -14,9 +14,6 @@ import com.csitte.autocloseablelock.LockCondition;
  */
 public class Activity
 {
-    private long count;
-    private String context;
-
     //- Activity timestamps
     private Instant startOfActivity;
     private Instant lastActivity = Instant.EPOCH;
@@ -91,7 +88,7 @@ public class Activity
      *	@param msg	activity-type text
      *  @return AutoCloseable object for try-with-resources functionality
      */
-    public CloseableActivity startActivity(String msg)
+    public CloseableActivity startActivity()
     {
         try (AutoCloseableLock lock = activityLock.lock())
         {
@@ -99,10 +96,6 @@ public class Activity
             {
                 throw new ActivityRuntimeException("already active");
             }
-            //- increase count of activities
-            count++;
-            context = msg + count;
-
             //- setup timestamps
             startOfActivity = Instant.now();
             lastActivity = startOfActivity;
@@ -145,11 +138,10 @@ public class Activity
     {
         try (AutoCloseableLock lock = activityLock.lock())
         {
-            return "context=" + context
-                	+ " startOfActivity=" + startOfActivity
-                	+ " lastActivity= " + lastActivity
-                	+ " endOfActivity=" + endOfActivity
-                	+ " status=" + activityCondition;
+            return " startOfActivity=" + startOfActivity
+            	 + " lastActivity="    + lastActivity
+            	 + " endOfActivity="   + endOfActivity
+            	 + " status="          + activityCondition;
         }
     }
 }
