@@ -18,7 +18,7 @@ public class LockConditionTest
     private static final Logger LOG = LogManager.getLogger(LockConditionTest.class);
 
     @Test
-    void testStringCondition()
+    public void testStringCondition()
     {
         CloseableLock lock = new CloseableLock();
         LockCondition<String> stringCondition = new LockCondition<>(lock, null);
@@ -30,7 +30,7 @@ public class LockConditionTest
     }
 
     @Test
-    void testEnumCondition()
+    public void testEnumCondition()
     {
         LOG.debug("INIT");
         CloseableLock lock = new CloseableLock();

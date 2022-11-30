@@ -12,7 +12,7 @@ import com.csitte.autocloseablelock.AutoCloseableWriteLock;
 import com.csitte.autocloseablelock.CloseableReadWriteLock;
 import com.csitte.autocloseablelock.LockCondition.BooleanLockCondition;
 
-public class DummyActivity extends Activity implements Runnable
+public class DummyActivity extends Activity<String> implements Runnable
 {
 	private static final Logger LOG = LogManager.getLogger(DummyActivity.class);
 

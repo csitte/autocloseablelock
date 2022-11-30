@@ -17,12 +17,12 @@ import org.junit.jupiter.api.Test;
 import com.csitte.activity.ActivityRuntimeException;
 import com.csitte.activity.CloseableActivity;
 
-class ActivityTest
+public class ActivityTest
 {
     private static final Logger LOG = LogManager.getLogger(ActivityTest.class);
 
 	@Test
-	void test()
+	public void test()
 	{
 	    LOG.debug("new TestActivity()");
 		DummyActivity activity = new DummyActivity();
@@ -30,7 +30,7 @@ class ActivityTest
 		assertNull(activity.getStartOfActivity());
 		assertNotNull(activity.getLastActivity());
 		assertNull(activity.getEndOfActivity());
-		assertEquals("", activity.getStatus());
+		assertNull(activity.getStatus());
 
 		activity.setShutdownRequest(false); // only for junit test
 
@@ -44,9 +44,6 @@ class ActivityTest
 
 			activity.updateStatus("activity in progress");
 			assertEquals("activity in progress", activity.getStatus());
-
-			activity.errorStatus("error-message-test");
-			assertEquals("error-message-test", activity.getStatus());
 
 		    LOG.debug("startActivityThread");
 			activity.startActivityThread();
@@ -64,6 +61,7 @@ class ActivityTest
 
 		    LOG.debug("Wait until activity ended");
 			assertTrue(activity.getLock().waitForCondition(() -> !activity.isThreadRunning(), Duration.ofSeconds(5)));
+            activity.getLock().waitForCondition(() -> false, Duration.ofMillis(100));
 
             LOG.debug("touch activity()");
             assertTrue(instant.isBefore(activity.touch()));

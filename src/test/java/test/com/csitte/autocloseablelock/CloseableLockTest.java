@@ -27,7 +27,7 @@ import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
 /**
  * Tests for CloseableLock class
  */
-class CloseableLockTest
+public class CloseableLockTest
 {
     private static final Logger LOG = LogManager.getLogger(CloseableLockTest.class);
 
@@ -70,7 +70,7 @@ class CloseableLockTest
     }
 
     @Test
-    void testTryLockNeg()
+    public void testTryLockNeg()
     {
         boolean status;
         ThreadObject thread;
@@ -92,7 +92,7 @@ class CloseableLockTest
     }
 
     @Test
-    void testTryLockTimeout()
+    public void testTryLockTimeout()
     {
         CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
@@ -111,7 +111,7 @@ class CloseableLockTest
     }
 
     @Test
-    void testWaitInterrupted()
+    public void testWaitInterrupted()
     {
         CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
@@ -130,14 +130,14 @@ class CloseableLockTest
     }
 
     @Test
-    void testLockConstructor()
+    public void testLockConstructor()
     {
         ReentrantLock baseLock = new ReentrantLock();
         new CloseableLock(baseLock);
     }
 
     @Test
-    void testCondition()
+    public void testCondition()
     {
         CloseableLock lock = new CloseableLock();
         BooleanLockCondition condition = new BooleanLockCondition(lock);
@@ -145,7 +145,7 @@ class CloseableLockTest
     }
 
     @Test
-    void testWait()
+    public void testWait()
     {
         CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
@@ -157,7 +157,7 @@ class CloseableLockTest
     }
 
     @Test
-    void testSignal()
+    public void testSignal()
     {
         CloseableLock lock = new CloseableLock();
         lock.signal();

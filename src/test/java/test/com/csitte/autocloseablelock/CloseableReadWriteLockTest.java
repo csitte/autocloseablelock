@@ -19,14 +19,14 @@ import com.csitte.autocloseablelock.LockException;
 /**
  * Tests for CloseableReadWriteLock class
  */
-class CloseableReadWriteLockTest
+public class CloseableReadWriteLockTest
 {
     private static final Duration SEC10 = Duration.ofSeconds(10L);
     private static final Duration SEC2 = Duration.ofSeconds(2L);
 
 
     @Test
-    void testConstructor()
+    public void testConstructor()
     {
         CloseableReadWriteLock lock;
         lock = new CloseableReadWriteLock();
@@ -39,7 +39,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testReadLock()
+    public void testReadLock()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableLock acl = lock.readLock())
@@ -48,7 +48,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testTryReadLock()
+    public void testTryReadLock()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableLock acl = lock.tryReadLock(SEC10))
@@ -57,7 +57,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testWriteLock()
+    public void testWriteLock()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
@@ -71,7 +71,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testWriteLockInterruptibly()
+    public void testWriteLockInterruptibly()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLockInterruptibly())
@@ -80,7 +80,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testTryWriteLock()
+    public void testTryWriteLock()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.tryWriteLock(SEC10))
@@ -90,7 +90,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testWait()
+    public void testWait()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
@@ -100,7 +100,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testWaitForCondition()
+    public void testWaitForCondition()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
@@ -124,7 +124,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testSignal()
+    public void testSignal()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
@@ -149,7 +149,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testCondition()
+    public void testCondition()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         try (AutoCloseableWriteLock acwl = lock.writeLock())
@@ -160,7 +160,7 @@ class CloseableReadWriteLockTest
     }
 
     @Test
-    void testClose()
+    public void testClose()
     {
         CloseableReadWriteLock lock = new CloseableReadWriteLock();
         AutoCloseableWriteLock acwl = new AutoCloseableWriteLockImpl(lock);

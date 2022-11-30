@@ -16,7 +16,7 @@ import java.util.function.BooleanSupplier;
  * It does not implement the Lock interface in order to ensure
  * that it can only be used through the try-with-resources mechanism.
 */
-public class CloseableLock implements AutoCloseableLock
+public class CloseableLock
 {
     /**
      * The lock to use.
@@ -67,7 +67,7 @@ public class CloseableLock implements AutoCloseableLock
     public AutoCloseableLock lock()
     {
         myLock.lock();
-        return this;
+        return this::close;
     }
 
     /**
@@ -82,7 +82,7 @@ public class CloseableLock implements AutoCloseableLock
         try
         {
             myLock.lockInterruptibly();
-            return this;
+            return this::close;
         }
         catch (InterruptedException x)
         {
@@ -136,7 +136,7 @@ public class CloseableLock implements AutoCloseableLock
                     }
                 }
             }
-            return this;
+            return this::close;
         }
         catch (InterruptedException x)
         {
@@ -219,7 +219,6 @@ public class CloseableLock implements AutoCloseableLock
     /**
      *  Release the lock.
      */
-    @Override
     public void close()
     {
         myLock.unlock();
@@ -282,5 +281,17 @@ public class CloseableLock implements AutoCloseableLock
                 throw new LockException("interrupted", x);
             }
         }
+    }
+
+    /**
+     *  Wait for condition to become true.
+     *
+     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *
+     *  @throws LockException if interrupted
+     */
+    public void waitForCondition(BooleanSupplier fCondition)
+    {
+        waitForCondition(fCondition, null);
     }
 }
