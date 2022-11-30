@@ -6,13 +6,13 @@ It also handles any `InterruptedException` during waits
 and also handles timeouts correctly,
 when '[spurious](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Condition.html)'-wakeups occur.
 
-Add following to `<dependencies/>` section of your pom.xml -
+Add the following to the `<dependencies/>` section of your pom.xml -
 
 ```
 <dependency>
     <groupId>com.csitte</groupId>
     <artifactId>autocloseablelock</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 ```
 
