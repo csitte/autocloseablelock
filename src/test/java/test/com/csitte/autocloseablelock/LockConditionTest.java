@@ -18,7 +18,7 @@ public class LockConditionTest
     private static final Logger LOG = LogManager.getLogger(LockConditionTest.class);
 
     @Test
-    void testStringCondition()
+    public void testStringCondition()
     {
         CloseableLock lock = new CloseableLock();
         LockCondition<String> stringCondition = new LockCondition<>(lock, null);
@@ -30,7 +30,7 @@ public class LockConditionTest
     }
 
     @Test
-    void testEnumCondition()
+    public void testEnumCondition()
     {
         LOG.debug("INIT");
         CloseableLock lock = new CloseableLock();
@@ -48,7 +48,7 @@ public class LockConditionTest
                     {
                         LOG.debug("RUNNING");
                         assertEquals(State.INIT, stateCondition.getState());
-                        acl2.wait(Duration.ofSeconds(1L));
+                        lock.wait(Duration.ofSeconds(1L));
                         stateCondition.setRunning();
                         LOG.debug("wait for FINISHED");
                         lock.waitForCondition(() -> stateCondition.isFinished(), null);

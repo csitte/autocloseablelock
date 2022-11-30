@@ -6,14 +6,17 @@ It also handles any `InterruptedException` during waits
 and also handles timeouts correctly,
 when '[spurious](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Condition.html)'-wakeups occur.
 
+Add following to `<dependencies/>` section of your pom.xml -
+
 ```
-<!-- https://mvnrepository.com/artifact/com.csitte/autocloseablelock -->
 <dependency>
     <groupId>com.csitte</groupId>
     <artifactId>autocloseablelock</artifactId>
     <version>1.0</version>
 </dependency>
 ```
+
+- Available on [maven central repository](https://mvnrepository.com/artifact/com.csitte/autocloseablelock)
 
 ## Basic Usage
 
@@ -87,9 +90,10 @@ Otherwise the test is performed in one-second intervals.
 
 ## ReadWriteLock
 
-Use `CloseableReadWriteLock` if you need the `ReadWriteLock` functionality and want also the `AutoCloseable` benefits.
+Use `CloseableReadWriteLock` if you need the [`ReadWriteLock`](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/locks/ReadWriteLock.html)
+functionality and also want the `AutoCloseable` benefits.
 The read lock may be simultaneously held by multiple threads as long as there is no write.
-One speciality here is the possibility to downgrade a write-lock to a read-lock.
+One speciality here is the possibility to downgrade a write-lock to a read-lock without losing the grip on the lock.
 
         CloseableReadWriteLock readWriteLock = new CloseableReadWriteLock();
         void method()

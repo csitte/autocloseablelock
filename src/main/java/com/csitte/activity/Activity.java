@@ -12,29 +12,36 @@ import com.csitte.autocloseablelock.LockCondition;
  *	Use the lock() method to access the resources of an activity.
  *  Use the waitForCondition() method to synchronize with any activity condition.
  */
-public class Activity
+public class Activity<T>
 {
     //- Activity timestamps
     private Instant startOfActivity;
     private Instant lastActivity = Instant.EPOCH;
     private Instant endOfActivity;
-    private final LockCondition<String> activityCondition;
-    private final CloseableLock activityLock;
+    private LockCondition<T> condition;
+    private final CloseableLock activityLock = new CloseableLock();
 
-
-    /**
-     *  Constructor
-     */
-    public Activity()
-    {
-        activityLock = new CloseableLock();
-        activityCondition = new LockCondition<>(activityLock, "");
-    }
 
     public CloseableLock getLock()
     {
         return activityLock;
     }
+
+    protected LockCondition<T> getCondition()
+    {
+        if (condition == null)
+        {
+            try (AutoCloseableLock lock = activityLock.lock())
+            {
+                if (condition == null)
+                {
+                    condition = new LockCondition<>(activityLock, null);
+                }
+            }
+        }
+        return condition;
+    }
+
 
     public boolean isActive()
     {
@@ -59,27 +66,18 @@ public class Activity
         return endOfActivity;
     }
 
-    public void updateStatus(String statusText)
+    public void updateStatus(T status)
     {
         try (AutoCloseableLock lock = activityLock.lock())
         {
-            activityCondition.setState(statusText);
+            getCondition().setState(status);
             lastActivity = Instant.now();
         }
     }
 
-    public void errorStatus(String errorText)
+    public T getStatus()
     {
-        try (AutoCloseableLock lock = activityLock.lock())
-        {
-            activityCondition.setState(errorText);
-            lastActivity = Instant.now();
-        }
-    }
-
-    public String getStatus()
-    {
-        return activityCondition.getState();
+        return getCondition().getState();
 	}
 
     /**
@@ -109,7 +107,7 @@ public class Activity
         {
             if (!isActive())
             {
-                throw new ActivityRuntimeException();
+                throw new ActivityRuntimeException("not active");
             }
             lastActivity = Instant.now();
             return lastActivity;
@@ -127,8 +125,8 @@ public class Activity
             {
                 throw new ActivityRuntimeException("not active");
             }
-            endOfActivity = Instant.now();
-            lastActivity = endOfActivity;
+            lastActivity = Instant.now();
+            endOfActivity = lastActivity;
         }
     }
 
@@ -140,7 +138,7 @@ public class Activity
             return " startOfActivity=" + startOfActivity
             	 + " lastActivity="    + lastActivity
             	 + " endOfActivity="   + endOfActivity
-            	 + " status="          + activityCondition;
+            	 + " status="          + condition;
         }
     }
 }
