@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
@@ -33,6 +34,78 @@ public class CloseableLockTest
 
     private static final Duration SEC10 = Duration.ofSeconds(10);
     private static final Duration SEC2 = Duration.ofSeconds(2);
+
+    @Test /* created by chatgpt */
+    public void testLock() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.lock())
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        Thread.sleep(100);
+        assertTrue(locked.get()); // "Lock acquired"
+
+        thread.join();
+    }
+
+    @Test /* created by chatgpt */
+    public void testTryLock() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.tryLock(Duration.ofSeconds(1)))
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+        Thread.sleep(100);
+        assertTrue(locked.get()); // false: lock not acquired
+
+        thread.join();
+    }
+
+    @Test /* created by chatgpt */
+    public void testLockInterruptibly() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.lockInterruptibly())
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        Thread.sleep(100);
+        thread.interrupt();
+        thread.join();
+        assertTrue(locked.get());   // false: lock not acquired
+    }
 
     @ParameterizedTest
     @EnumSource(value = MODE.class, names = { "TRY_LOCK_ZERO", "TRY_LOCK_NULL"})

@@ -11,10 +11,22 @@ import java.util.function.BooleanSupplier;
 
 
 /**
- * This class provides a wrapper for a java.util.concurrent.locks.Lock object
+ * The CloseableLock class provides a wrapper for a java.util.concurrent.locks.Lock object
  * that can be used with the Java try-with-resources functionality.
- * It does not implement the Lock interface in order to ensure
+ *
+ * This class allows for lock acquisition through the standard lock(), lockInterruptibly()
+ * and tryLock(Duration timeout) methods.
+ * The lock is automatically released when the try-with-resources block is exited.
+ *
+ * This class does not implement the Lock interface in order to ensure
  * that it can only be used through the try-with-resources mechanism.
+ *
+ * It properly handles InterruptedExceptions and throws a custom LockException when appropriate.
+ *
+ * Usage example:
+ * try (AutoCloseableLock lock = closeableLock.lock()) {
+ *      // protected code
+ * }
 */
 public class CloseableLock
 {
@@ -94,6 +106,9 @@ public class CloseableLock
     /**
      *  Acquires the lock if it is free within the given waiting time and the
      *  current thread has not been {@linkplain Thread#interrupt interrupted}.
+     *
+     *  It uses a timeout loop that re-evaluates the remaining wait time
+     *  and it uses ChronoUnit.NANOS to get the remaining wait time in nanoseconds.
      *
      *  @param timeout  null or 0 means: Return immediately or throw LockException if locked.
      *                  A negative timeout value means to wait without timeout.
