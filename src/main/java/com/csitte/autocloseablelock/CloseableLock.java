@@ -89,7 +89,7 @@ public class CloseableLock
      *
      * @see Lock#lockInterruptibly()
      */
-    public AutoCloseableLock lockInterruptibly()
+    public AutoCloseableLock lockInterruptibly() throws LockException
     {
         try
         {
@@ -129,7 +129,7 @@ public class CloseableLock
             {
                 if (!myLock.tryLock()) // is locked?
                 {
-                    throw new LockException("not aquired"); // no wait
+                    throw new LockException("not acquired"); // no wait
                 }
             }
             else if (timeout.isNegative())

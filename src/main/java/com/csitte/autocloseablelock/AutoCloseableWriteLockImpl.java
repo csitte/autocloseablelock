@@ -5,11 +5,23 @@ import java.util.function.BooleanSupplier;
 
 
 /**
- *  The thread that holds the write lock can downgrade to a read lock.
- *  It can acquire a read lock before it releases the write lock to downgrade from a write lock to a read lock
- *  while ensuring that no other thread is permitted to acquire the write lock
- *  while it is in the process of downgrading.
-*/
+ * The AutoCloseableWriteLockImpl class provides a wrapper for a CloseableReadWriteLock object,
+ * allowing the thread that holds the write lock to downgrade to a read lock.
+ *
+ * This is done by acquiring a read lock before releasing the write lock,
+ * ensuring that no other thread can acquire the write lock while the thread is
+ * in the process of downgrading.
+ *
+ * It is important to note that the methods waitForCondition, signalAll, and
+ * signal are only usable with write-lock.
+ * If they are called with a read-lock, it will throw a LockException of
+ * 'invalid state'.
+ *
+ * Also the methods downgradeToReadLock and downgradeToReadLockInterruptibly
+ * should only be called after the thread has acquired a write lock.
+ * If they are called before a write lock is acquired, it will throw a
+ * LockException of 'invalid state'
+ */
 public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
 {
     private CloseableReadWriteLock readWriteLock;
@@ -30,7 +42,10 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         this.readWriteLock = readWriteLock;
     }
 
-    void writeLock()
+    /**
+     * Obtain an exclusive write lock on the associated readWriteLock instance.
+     */
+    protected void writeLock()
     {
         if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
         {
@@ -39,7 +54,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         autoCloseableWriteLock = readWriteLock.getWriteLock().lock();
     }
 
-    void writeLockInterruptibly()
+    protected void writeLockInterruptibly()
     {
         if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
         {
@@ -48,7 +63,7 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         autoCloseableWriteLock = readWriteLock.getWriteLock().lockInterruptibly();
     }
 
-    void tryWriteLock(Duration timeout)
+    protected void tryWriteLock(Duration timeout)
     {
         if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
         {

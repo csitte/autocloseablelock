@@ -19,9 +19,10 @@ public interface AutoCloseableWriteLock extends AutoCloseableLock
     void wait(Duration timeout);
 
     /**
-     *  Wait for condition to become true or timeout.
+     *  Allows a thread to wait for a specified condition to be met, with a specified timeout.
      *
-     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results.
+     *                      It is important to ensure that the BooleanSupplier is efficient to avoid performance issues.
      *  @param  timeout     null or 0 means: no timeout
      *
      *  @return true == condition met; false == timeout or interrupt occured
@@ -29,9 +30,14 @@ public interface AutoCloseableWriteLock extends AutoCloseableLock
     boolean waitForCondition(BooleanSupplier fCondition, Duration timeout);
 
     /**
-     *  Wakes up thread(s) which are waiting for the condition.
+     *  Allows a thread to wake up all waiting threads waiting on the lock.
      */
     void signalAll();
+
+    /**
+     *  Allows a thread to signal another thread waiting on the lock.
+     *  If any threads are waiting on this condition then one is selected for waking up.
+     */
     void signal();
 
     void downgradeToReadLock();

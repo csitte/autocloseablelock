@@ -2,6 +2,8 @@ package com.csitte.activity;
 
 public class ActivityRuntimeException extends RuntimeException
 {
+    private static final long serialVersionUID = -8376644119766382385L;
+
     public ActivityRuntimeException()
     {
         super();
