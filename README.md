@@ -1,8 +1,10 @@
 # AutoCloseable Lock
 
 The AutoCloseableLock package provides a convenient and reliable way to use locks in Java.
-The try-with-resources feature, handling of exceptions and timeouts, and the possibility of waiting for conditions make this package an attractive choice for multi-threaded applications.
-With the additional functionality provided by CloseableReadWriteLock and LockCondition, developers can easily implement robust synchronization mechanisms in their applications.
+The try-with-resources feature, handling of exceptions and timeouts,
+and the possibility of waiting for conditions make this package an attractive choice for multi-threaded applications.
+With the additional functionality provided by CloseableReadWriteLock and LockCondition,
+developers can easily implement robust synchronization mechanisms in their applications.
 
 This package provides a simple wrapper for the [`java.util.concurrent.locks`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/package-summary.html) package, which can be used with Java's try-with-resources functionality. </br>
 It also handles any `InterruptedException` during waits and correctly manages timeouts when "[spurious](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/Condition.html)"-wakeups occur.
@@ -40,7 +42,7 @@ Instead of the traditional way:
         
 Use it with the try-with-resources feature:
 
-        CloseableLock myLock = new CloseableLock();
+        CloseableLock myLock = new CloseableLock(new ReentrantLock());
         void method()
         {
             try (AutoCloseableLock autoCloseableLock = myLock.lock())
@@ -99,7 +101,7 @@ functionality and also want the benefits of `AutoCloseable`.
 The read-lock may be held simultaneously by multiple threads as long as there is no write-lock.
 A unique feature is the ability to downgrade a write-lock to a read-lock without losing the hold on the lock.
 
-        CloseableReadWriteLock readWriteLock = new CloseableReadWriteLock();
+        CloseableReadWriteLock readWriteLock = new CloseableReadWriteLock(new ReentrantReadWriteLock());
         void method()
         {
             try (AutoCloseableWriteLock acwl = readWriteLock.writeLock())
@@ -120,7 +122,9 @@ The `CloseableReadWriteLock` has the following locking-methods:
             AutoCloseableLock readLock()
             AutoCloseableLock tryReadLock(Duration)
 
-The methods that acquire a write-lock return an `AutoCloseableWriteLock` object, which should be used in a try-with-resources block to ensure that the lock is released afterwards. Inside the block, the following methods can be used with `AutoCloseableWriteLock`.
+The methods that acquire a write-lock return an `AutoCloseableWriteLock` object,
+which should be used in a try-with-resources block to ensure that the lock is released afterwards.
+Inside the block, the following methods can be used with `AutoCloseableWriteLock`.
 
              void wait(Duration timeout)
              boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
@@ -134,7 +138,8 @@ The methods that acquire a write-lock return an `AutoCloseableWriteLock` object,
 This class represents a state. It is bound to a lock. If the state of the `LockCondition` changes, 
 this is signaled to all waiting threads. The `setState()` method acquires the lock before changing the state.
 
-        # This example uses a 'State' enum type which the values of INIT, ACTIVE and FINISHED
+        # Example
+        enum STATE { INIT, ACTIVE, FINISHED }
         CloseableLock myLock = new CloseableLock();
         LockCondition<State> state = new LockCondition<>(myLock, State.INIT);
         
