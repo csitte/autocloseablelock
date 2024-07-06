@@ -47,6 +47,17 @@
         
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.13.0</version>
+            <configuration>
+                <source>${maven.compiler.source}</source>
+                <target>${maven.compiler.target}</target>
+                <release>${maven.compiler.release}</release>
+            </configuration>
+          </plugin>
+                    
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
             <version>3.0.1</version>
             <executions>
@@ -156,12 +167,13 @@
 
   <properties>
     <java.version>1.8</java.version>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.source>1.8</maven.compiler.source>        
+    <maven.compiler.target>8</maven.compiler.target>
+    <maven.compiler.source>8</maven.compiler.source>        
+    <maven.compiler.release>8</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <log4j.version>2.23.1</log4j.version>
-    <junit.jupiter.version>5.10.2</junit.jupiter.version>
+    <junit.jupiter.version>5.10.3</junit.jupiter.version>
   </properties>
   
   <dependencies>
