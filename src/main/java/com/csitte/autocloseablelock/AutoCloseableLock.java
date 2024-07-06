@@ -12,6 +12,7 @@ package com.csitte.autocloseablelock;
  * }
  *
  */
+@SuppressWarnings("PMD.CommentSize")
 public interface AutoCloseableLock extends AutoCloseable
 {
     /**

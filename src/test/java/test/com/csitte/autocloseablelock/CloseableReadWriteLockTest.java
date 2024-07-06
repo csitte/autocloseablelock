@@ -19,6 +19,7 @@ import com.csitte.autocloseablelock.LockException;
 /**
  * Tests for CloseableReadWriteLock class
  */
+@SuppressWarnings("PMD")
 public class CloseableReadWriteLockTest
 {
     private static final Duration SEC10 = Duration.ofSeconds(10L);
@@ -35,7 +36,7 @@ public class CloseableReadWriteLockTest
         CloseableLock writeLock = lock.getWriteLock();
         assertNotNull(writeLock);
 
-        lock = new CloseableReadWriteLock();
+        new CloseableReadWriteLock();
     }
 
     @Test

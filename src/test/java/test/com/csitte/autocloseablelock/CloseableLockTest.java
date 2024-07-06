@@ -1,6 +1,5 @@
 package test.com.csitte.autocloseablelock;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,6 +28,7 @@ import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
 /**
  * Tests for CloseableLock class
  */
+@SuppressWarnings("PMD")
 public class CloseableLockTest
 {
     private static final Logger LOG = LogManager.getLogger(CloseableLockTest.class);

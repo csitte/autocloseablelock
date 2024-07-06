@@ -9,7 +9,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
 
-
 /**
  * The CloseableLock class provides a wrapper for a java.util.concurrent.locks.Lock object
  * that can be used with the Java try-with-resources functionality.
@@ -28,6 +27,7 @@ import java.util.function.BooleanSupplier;
  *      // protected code
  * }
 */
+@SuppressWarnings({"PMD.CommentSize", "PMD.DoNotUseThreads", "PMD.TooManyMethods"})
 public class CloseableLock
 {
     /**
@@ -41,7 +41,8 @@ public class CloseableLock
      */
     private Condition condition;
 
-    private static final long ONE_SECOND_IN_NANOS = 1000000000L;
+    /** One Second Constant */
+    private static final long SECOND_IN_NANOS = 1_000_000_000L;
 
 
     /**
@@ -59,7 +60,7 @@ public class CloseableLock
      *
      *  @param  lock    the lock object to use
      */
-    public CloseableLock(Lock lock)
+    public CloseableLock(final Lock lock)
     {
         this.myLock = lock;
     }
@@ -89,7 +90,7 @@ public class CloseableLock
      *
      * @see Lock#lockInterruptibly()
      */
-    public AutoCloseableLock lockInterruptibly() throws LockException
+    public AutoCloseableLock lockInterruptibly()
     {
         try
         {
@@ -121,43 +122,48 @@ public class CloseableLock
      *
      *  @throws LockTimeoutException on timeout.
      */
-    public AutoCloseableLock tryLock(Duration timeout)
+    public AutoCloseableLock tryLock(final Duration timeout)
+    {
+        if (timeout == null || timeout.isZero())
+        {
+            if (!myLock.tryLock()) // is locked?
+            {
+                throw new LockException("not acquired"); // no wait
+            }
+        }
+        else if (timeout.isNegative())
+        {
+            myLock.lock();  // wait without timeout
+        }
+        else
+        {
+            tryLockWithTimeout(timeout);
+        }
+        return this::close;
+    }
+
+    /** tryLock with timeout */
+    private void tryLockWithTimeout(final Duration timeout)
     {
         try
         {
-            if (timeout == null || timeout.isZero())
+            final Instant startOfWait = Instant.now();
+            Duration remainingWaitTime = timeout;
+            while (!myLock.tryLock(remainingWaitTime.get(ChronoUnit.NANOS), TimeUnit.NANOSECONDS))
             {
-                if (!myLock.tryLock()) // is locked?
+                final Duration elapsedTime = Duration.between(startOfWait, Instant.now());
+                remainingWaitTime = timeout.minus(elapsedTime);
+                if (remainingWaitTime.isZero() || remainingWaitTime.isNegative())
                 {
-                    throw new LockException("not acquired"); // no wait
+                    throw new LockTimeoutException(elapsedTime);
                 }
             }
-            else if (timeout.isNegative())
-            {
-                myLock.lock();  // wait without timeout
-            }
-            else
-            {
-                //- Timeout-loop
-                Instant startOfWait = Instant.now();
-                Duration remainingWaitTime = timeout;
-                while (!myLock.tryLock(remainingWaitTime.get(ChronoUnit.NANOS), TimeUnit.NANOSECONDS))
-                {
-                    Duration elapsedTime = Duration.between(startOfWait, Instant.now());
-                    remainingWaitTime = timeout.minus(elapsedTime);
-                    if (remainingWaitTime.isZero() || remainingWaitTime.isNegative())
-                    {
-                        throw new LockTimeoutException(elapsedTime);
-                    }
-                }
-            }
-            return this::close;
-        }
-        catch (InterruptedException x)
-        {
-            Thread.currentThread().interrupt();
-            throw new LockException(x);
-        }
+          }
+          catch (InterruptedException x)
+          {
+              Thread.currentThread().interrupt();
+              throw new LockException(x);
+          }
     }
 
     /**
@@ -170,7 +176,7 @@ public class CloseableLock
      *
      *  @throws LockException on invalid timeout value
      */
-    public void wait(Duration timeout)
+    public void wait(final Duration timeout)
     {
         if (timeout == null || timeout.isZero())
         {
@@ -203,6 +209,7 @@ public class CloseableLock
     {
         try (AutoCloseableLock autoCloseableLock = lock())
         {
+            assert autoCloseableLock != null; // ignored on runtime
             if (condition != null)
             {
                 //- only if condition is in use
@@ -223,6 +230,7 @@ public class CloseableLock
     {
         try (AutoCloseableLock autoCloseableLock = lock())
         {
+            assert autoCloseableLock != null; // ignored on runtime
             if (condition != null)
             {
                 //- only if condition is in use
@@ -252,51 +260,61 @@ public class CloseableLock
      *
      *  @return true == condition met; false == timeout or interrupt occured
      */
-    public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
+    public boolean waitForCondition(final BooleanSupplier fCondition, final Duration timeout)
     {
-        if (fCondition.getAsBoolean()) // test condition
+        boolean result = true;
+        if (!fCondition.getAsBoolean()) // test condition
         {
-            return true;
-        }
-        try (AutoCloseableLock autoCloseableLock = lock())
-        {
-            //- calculate end of wait if valid timeout parameter is available
-            Instant startOfWait = Instant.now();
-            Instant endOfWait = null;
-            if (timeout != null && !timeout.isZero() && !timeout.isNegative())
+            try (AutoCloseableLock autoCloseableLock = lock())
             {
-                endOfWait = startOfWait.plus(timeout);
-            }
-            try
-            {
-                do
+                assert autoCloseableLock != null; // ignored on runtime
+                //- calculate end of wait if valid timeout parameter is available
+                final Instant startOfWait = Instant.now();
+                Instant endOfWait = null;
+                if (timeout != null && !timeout.isZero() && !timeout.isNegative())
                 {
-                    long nanos = ONE_SECOND_IN_NANOS; // default wait-interval
-                    if (endOfWait != null)
-                    {
-                        Instant now = Instant.now();
-                        long remainingWaitTime = Duration.between(now, endOfWait).toNanos();
-                        if (remainingWaitTime <= 0)
-                        {
-                            return false; // timeout
-                        }
-                        if (remainingWaitTime < ONE_SECOND_IN_NANOS) // wait less than default interval?
-                        {
-                            nanos = remainingWaitTime;
-                        }
-                    }
-                    getOrCreateCondition().awaitNanos(nanos);
+                    endOfWait = startOfWait.plus(timeout);
                 }
-                while (!fCondition.getAsBoolean()); // test condition
-                return true;
-            }
-            catch (InterruptedException x)
-            {
-                Thread.currentThread().interrupt();
-                throw new LockException("interrupted", x);
+                try
+                {
+                    result = waitForCondition(fCondition, endOfWait);
+                }
+                catch (InterruptedException x)
+                {
+                    Thread.currentThread().interrupt();
+                    throw new LockException("interrupted", x);
+                }
             }
         }
+        return result;
     }
+
+    private boolean waitForCondition(final BooleanSupplier fCondition, final Instant endOfWait) throws InterruptedException
+    {
+        boolean result = true;
+        do
+        {
+            long nanos = SECOND_IN_NANOS; // default wait-interval
+            if (endOfWait != null)
+            {
+                final Instant now = Instant.now();
+                final long remainingWaitTime = Duration.between(now, endOfWait).toNanos();
+                if (remainingWaitTime <= 0) // timeout
+                {
+                    result = false;
+                    break; // return;
+                }
+                if (remainingWaitTime < SECOND_IN_NANOS) // wait less than default interval?
+                {
+                    nanos = remainingWaitTime;
+                }
+            }
+            getOrCreateCondition().awaitNanos(nanos);
+        }
+        while (!fCondition.getAsBoolean()); // test condition
+        return result;
+    }
+
 
     /**
      *  Wait for condition to become true.
@@ -305,8 +323,8 @@ public class CloseableLock
      *
      *  @throws LockException if interrupted
      */
-    public void waitForCondition(BooleanSupplier fCondition)
+    public void waitForCondition(final BooleanSupplier fCondition)
     {
-        waitForCondition(fCondition, null);
+        waitForCondition(fCondition, (Duration)null);
     }
 }

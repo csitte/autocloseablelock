@@ -16,6 +16,7 @@ import com.csitte.autocloseablelock.AutoCloseableWriteLockImpl;
 import com.csitte.autocloseablelock.CloseableReadWriteLock;
 import com.csitte.autocloseablelock.LockException;
 
+@SuppressWarnings("PMD")
 public class AutoCloseableWriteLockImplTest
 {
 

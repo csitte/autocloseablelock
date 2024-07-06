@@ -106,9 +106,40 @@
             </executions>
           </plugin>
           
+          <!-- PMD Plugin -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-pmd-plugin</artifactId>
+            <version>3.23.0</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>check</goal>
+                        <goal>cpd-check</goal>
+                    </goals>
+                    <configuration>
+                        <excludeFromFailureFile>exclude-pmd.properties</excludeFromFailureFile>
+                    </configuration>
+                </execution>              
+            </executions>
+            <configuration>
+                <targetJdk>1.8</targetJdk>
+            </configuration>
+          </plugin>
+          
         </plugins>
       </build>
       
+      <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.23.0</version>
+            </plugin>
+        </plugins>
+      </reporting>
+    
       <distributionManagement>
         <snapshotRepository>
           <id>ossrh</id>

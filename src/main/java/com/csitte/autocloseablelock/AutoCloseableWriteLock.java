@@ -9,6 +9,7 @@ import java.util.function.BooleanSupplier;
  *  while ensuring that no other thread is permitted to acquire the write lock
  *  while it is in the process of downgrading.
 */
+@SuppressWarnings("PMD.CommentSize")
 public interface AutoCloseableWriteLock extends AutoCloseableLock
 {
     /**
@@ -40,7 +41,13 @@ public interface AutoCloseableWriteLock extends AutoCloseableLock
      */
     void signal();
 
+    /**
+     *  Downgrade write-lock to read-lock
+     */
     void downgradeToReadLock();
 
+    /**
+     *  Downgrade write-lock to read-lock (interruptibly)
+     */
     void downgradeToReadLockInterruptibly();
 }
