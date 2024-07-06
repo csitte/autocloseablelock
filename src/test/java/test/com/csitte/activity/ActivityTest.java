@@ -17,16 +17,17 @@ import org.junit.jupiter.api.Test;
 import com.csitte.activity.ActivityRuntimeException;
 import com.csitte.activity.CloseableActivity;
 
-public class ActivityTest
+@SuppressWarnings("PMD")
+class ActivityTest
 {
     private static final Logger LOG = LogManager.getLogger(ActivityTest.class);
 
 	@Test
-	public void test()
+	void test()
 	{
 	    LOG.debug("new TestActivity()");
-		DummyActivity activity = new DummyActivity();
-		assertFalse(activity.isActive());
+		final DummyActivity activity = DummyActivity.createInstance();
+		assertFalse(activity.isActive(), "is active");
 		assertNull(activity.getStartOfActivity());
 		assertNotNull(activity.getLastActivity());
 		assertNull(activity.getEndOfActivity());
@@ -35,12 +36,13 @@ public class ActivityTest
 		activity.setShutdownRequest(false); // only for junit test
 
 	    LOG.debug("start of test-activity");
-		try (CloseableActivity ca = activity.startActivity())
+		try (CloseableActivity closeableActivity = activity.startActivity())
 		{
+		    assert closeableActivity != null;
 			assertTrue(activity.isActive());
 			assertNull(activity.getEndOfActivity());
 
-			assertThrows(ActivityRuntimeException.class, () -> activity.startActivity());
+			assertThrows(ActivityRuntimeException.class, activity::startActivity);
 
 			activity.updateStatus("activity in progress");
 			assertEquals("activity in progress", activity.getStatus());
@@ -49,12 +51,12 @@ public class ActivityTest
 			activity.startActivityThread();
 
 		    LOG.debug("Wait until activity is running");
-			assertTrue(activity.getLock().waitForCondition(() -> activity.isThreadRunning(), null));
+			assertTrue(activity.getLock().waitForCondition(activity::isThreadRunning, null));
 
 		    LOG.debug("Wait 1 1/2 second");
 			activity.getLock().waitForCondition(() -> false, Duration.ofMillis(1500));
 
-            Instant instant = activity.touch();
+            final Instant instant = activity.touch();
 
 		    LOG.debug("Request shutdown");
 			activity.setShutdownRequest(true);
@@ -68,8 +70,8 @@ public class ActivityTest
 		}
 	    LOG.debug("end of activity");
 		assertFalse(activity.isActive());
-		assertThrows(ActivityRuntimeException.class, () -> activity.close());
-        assertThrows(ActivityRuntimeException.class, () -> activity.touch());
-        LOG.debug(activity.toString());
+		assertThrows(ActivityRuntimeException.class, activity::close);
+        assertThrows(ActivityRuntimeException.class, activity::touch);
+        LOG.debug(activity::toString);
 	}
 }
