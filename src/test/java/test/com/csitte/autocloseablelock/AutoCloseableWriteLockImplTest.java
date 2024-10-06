@@ -66,7 +66,7 @@ public class AutoCloseableWriteLockImplTest
         AutoCloseableWriteLock acwl = readWriteLock.writeLockInterruptibly();
         RunnableObject runnable = new RunnableObject(readWriteLock);
         Thread thread1 = new Thread(runnable);
-        thread1.start(); // thread is also trying to aquire the write-lock.
+        thread1.start(); // thread is also trying to acquire the write-lock.
         TimeUnit.MILLISECONDS.sleep(100);
         thread1.interrupt();
         thread1.join();
