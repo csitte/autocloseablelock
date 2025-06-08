@@ -36,7 +36,7 @@ Instead of the traditional way:
             }
             finally
             {
-                myLock.close();
+                myLock.unlock();
             }
         }
         

@@ -139,7 +139,7 @@ public class CloseableReadWriteLock
     /** Wait for write-lock condition (with timeout) */
     protected boolean waitForWriteLockCondition(final BooleanSupplier fCondition, final Duration timeout)
     {
-        return closeWriteLock.waitForCondition(()->false, timeout);
+        return closeWriteLock.waitForCondition(fCondition, timeout);
     }
 
     /** Signal all write-lock clients */

@@ -24,12 +24,12 @@ public class LockCondition<T>
      *  Constructor
      *
      *  @param lock         the associated lock
-     *  @param initalState  the initial state of this condition
+     *  @param initialState the initial state of this condition
      */
-    public LockCondition(final CloseableLock lock, final T initalState)
+    public LockCondition(final CloseableLock lock, final T initialState)
     {
         this.lock = lock;
-        this.state = initalState;
+        this.state = initialState;
         lock.getOrCreateCondition();
     }
 

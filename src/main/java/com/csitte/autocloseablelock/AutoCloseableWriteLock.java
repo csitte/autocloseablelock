@@ -26,7 +26,7 @@ public interface AutoCloseableWriteLock extends AutoCloseableLock
      *                      It is important to ensure that the BooleanSupplier is efficient to avoid performance issues.
      *  @param  timeout     null or 0 means: no timeout
      *
-     *  @return true == condition met; false == timeout or interrupt occured
+     *  @return true == condition met; false == timeout or interrupt occurred
      */
     boolean waitForCondition(BooleanSupplier fCondition, Duration timeout);
 
