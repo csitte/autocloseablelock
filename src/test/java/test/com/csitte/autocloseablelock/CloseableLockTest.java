@@ -54,8 +54,7 @@ public class CloseableLockTest
             }
         });
         thread.start();
-        Thread.sleep(100);
-        assertTrue(locked.get()); // "Lock acquired"
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
 
         thread.join();
     }
@@ -78,8 +77,7 @@ public class CloseableLockTest
         });
 
         thread.start();
-        Thread.sleep(100);
-        assertTrue(locked.get()); // false: lock not acquired
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
 
         thread.join();
     }
@@ -102,10 +100,10 @@ public class CloseableLockTest
             }
         });
         thread.start();
-        Thread.sleep(100);
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
         thread.interrupt();
         thread.join();
-        assertTrue(locked.get());   // false: lock not acquired
+        assertTrue(locked.get());   // "Lock acquired"
     }
 
     @ParameterizedTest
