@@ -2,8 +2,10 @@ package test.com.csitte.autocloseablelock;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
@@ -146,6 +148,36 @@ public class CloseableReadWriteLockTest
                 lockException = x; // no condition allowed for read-lock's
             }
             assertNotNull(lockException);
+        }
+    }
+
+    @Test
+    public void testWaitForConditionSignal()
+    {
+        CloseableReadWriteLock lock = new CloseableReadWriteLock();
+        AtomicBoolean state = new AtomicBoolean(false);
+
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableWriteLock acwl2 = lock.writeLock())
+            {
+                state.set(true);
+                acwl2.signal();
+            }
+        });
+
+        try (AutoCloseableWriteLock acwl = lock.writeLock())
+        {
+            thread.start();
+            boolean result = acwl.waitForCondition(state::get, SEC10);
+            assertTrue(result);
+        }
+        try
+        {
+            thread.join();
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
         }
     }
 
