@@ -13,9 +13,13 @@ import java.util.function.BooleanSupplier;
 public interface AutoCloseableWriteLock extends AutoCloseableLock
 {
     /**
-     *  Wait for timeout.
+     *  Waits for the specified period while holding the write lock.
      *
-     *  @param  timeout     null or 0 means: no timeout
+     *  <p>The {@code timeout} value must be greater than zero. Passing
+     *  {@code null} or a zero {@link Duration} results in a
+     *  {@link LockException}.</p>
+     *
+     *  @param timeout  the amount of time to wait
      */
     void wait(Duration timeout);
 
@@ -24,7 +28,7 @@ public interface AutoCloseableWriteLock extends AutoCloseableLock
      *
      *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results.
      *                      It is important to ensure that the BooleanSupplier is efficient to avoid performance issues.
-     *  @param  timeout     null or 0 means: no timeout
+     *  @param  timeout     {@code null} or {@link Duration#isZero() zero} means to wait without timeout
      *
      *  @return true == condition met; false == timeout or interrupt occurred
      */

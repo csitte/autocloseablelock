@@ -171,7 +171,7 @@ public class ActivityImpl<T> implements Activity<T>
         try (AutoCloseableLock lock = activityLock.lock())
         {
             assert lock != null; // ignored on runtime
-            return " startOfActivity=" + (startOfActivity==Instant.MAX? "": startOfActivity.toString())
+            return " startOfActivity=" + (startOfActivity==Instant.EPOCH? "": startOfActivity.toString())
             	 + " lastActivity="    + lastActivity
             	 + " endOfActivity="   + (endOfActivity==Instant.MAX? "": endOfActivity.toString())
             	 + " status="          + condition;

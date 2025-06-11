@@ -1,6 +1,6 @@
 package com.csitte.autocloseablelock;
 
-/** Null-Objekt-Pattern class */
+/** Null-Object pattern class */
 public final class NullAutoCloseableLock implements AutoCloseableLock
 {
     /** Singleton */
