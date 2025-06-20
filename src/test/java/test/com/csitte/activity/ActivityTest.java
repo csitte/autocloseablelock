@@ -74,4 +74,28 @@ class ActivityTest
         assertThrows(ActivityRuntimeException.class, activity::touch);
         LOG.debug(activity::toString);
 	}
+
+    @Test
+    public void testToString()
+    {
+        DummyActivity activity = DummyActivity.createInstance();
+        String initial = activity.toString();
+        assertTrue(initial.contains("startOfActivity= "));
+        assertTrue(initial.contains("lastActivity=1970-01-01T00:00:00Z"));
+        assertTrue(initial.contains("endOfActivity= "));
+        assertTrue(initial.endsWith("status=null"));
+
+        try (CloseableActivity ignored = activity.startActivity())
+        {
+            String running = activity.toString();
+            assertFalse(running.contains("startOfActivity= "));
+            assertTrue(running.contains("endOfActivity= "));
+            assertTrue(running.contains("status=null"));
+        }
+
+        String finished = activity.toString();
+        assertFalse(finished.contains("startOfActivity= "));
+        assertFalse(finished.contains("endOfActivity= "));
+        assertTrue(finished.contains("status=null"));
+    }
 }
