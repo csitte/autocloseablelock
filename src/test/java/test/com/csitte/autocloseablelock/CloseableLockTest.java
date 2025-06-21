@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
@@ -27,12 +28,83 @@ import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
 /**
  * Tests for CloseableLock class
  */
+@SuppressWarnings("PMD")
 public class CloseableLockTest
 {
     private static final Logger LOG = LogManager.getLogger(CloseableLockTest.class);
 
     private static final Duration SEC10 = Duration.ofSeconds(10);
     private static final Duration SEC2 = Duration.ofSeconds(2);
+
+    @Test /* created by chatgpt */
+    public void testLock() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.lock())
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
+
+        thread.join();
+    }
+
+    @Test /* created by chatgpt */
+    public void testTryLock() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.tryLock(Duration.ofSeconds(1)))
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
+
+        thread.join();
+    }
+
+    @Test /* created by chatgpt */
+    public void testLockInterruptibly() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        AtomicBoolean locked = new AtomicBoolean(false);
+
+        Thread thread = new Thread(() -> {
+            try (AutoCloseableLock autoCloseableLock = lock.lockInterruptibly())
+            {
+                locked.set(true);
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        assertTrue(lock.waitForCondition(locked::get, SEC2));
+        thread.interrupt();
+        thread.join();
+        assertTrue(locked.get());   // "Lock acquired"
+    }
 
     @ParameterizedTest
     @EnumSource(value = MODE.class, names = { "TRY_LOCK_ZERO", "TRY_LOCK_NULL"})
@@ -44,26 +116,26 @@ public class CloseableLockTest
         try (AutoCloseableLock acl = lock.lock())
         {
             ThreadObject thread = new ThreadObject(lock, mode, null); // no wait
-            LOG.debug("start thread & try to aquire lock (w/o wait), which goes wrong");
-            thread.start(); // start thread & try to aquire lock (w/o wait), which goes wrong
+            LOG.debug("start thread & try to acquire lock (w/o wait), which goes wrong");
+            thread.start(); // start thread & try to acquire lock (w/o wait), which goes wrong
             boolean status = waitLock.waitForCondition(()->thread.isFinished(), SEC10);
             assertTrue(status);
             assertNotNull(thread.getException());
 
             ThreadObject thread3 = new ThreadObject(lock, mode, null); // no wait
-            thread3.start(); // start thread & try to aquire lock (w/o wait)
+            thread3.start(); // start thread & try to acquire lock (w/o wait)
             status = waitLock.waitForCondition(()->thread3.isFinished(), null);
             assertTrue(status);
             assertNotNull(thread3.getException());
         }
         ThreadObject thread2 = new ThreadObject(lock, mode, null); // no wait
-        thread2.start(); // start thread & try to aquire lock (w/o wait)
+        thread2.start(); // start thread & try to acquire lock (w/o wait)
         boolean status = waitLock.waitForCondition(()->thread2.isFinished(), SEC10);
         assertTrue(status);
         assertNull(thread2.getException());
 
         ThreadObject thread4 = new ThreadObject(lock, mode, SEC2); // no wait
-        thread4.start(); // start thread & try to aquire lock (w/o wait)
+        thread4.start(); // start thread & try to acquire lock (w/o wait)
         status = waitLock.waitForCondition(()->thread4.isFinished(), SEC10);
         assertTrue(status);
         assertNull(thread4.getException());
@@ -99,12 +171,10 @@ public class CloseableLockTest
         {
             ThreadObject thread = new ThreadObject(lock, MODE.TRY_LOCK_3S_TIMEOUT, null); // wait w/o timeout
             thread.start();
-            //- Wait (max 10s) until thread is started
-            boolean status = lock.waitForCondition(()->thread.isStarted(), SEC10);
-            assertTrue(status);
 
+            //- block lock for 6 seconds, timeout in thread after 3 sec
             CloseableLock lock2 = new CloseableLock();
-            lock2.wait(Duration.ofSeconds(6)); // block lock for 6 seconds, timeout in thread after 3 sec
+            lock2.wait(Duration.ofSeconds(6));
             assertTrue(thread.isFinished());
             assertNotNull(thread.getException());
         }
@@ -170,6 +240,13 @@ public class CloseableLockTest
             lock.signal();
             lock.signalAll();
         }
+    }
+
+    @Test
+    public void testClose()
+    {
+        CloseableLock closeableLock = new CloseableLock();
+        assertThrows(IllegalMonitorStateException.class, closeableLock::close);
     }
 
     /**

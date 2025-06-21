@@ -5,18 +5,35 @@ import java.util.function.BooleanSupplier;
 
 
 /**
- *  The thread that holds the write lock can downgrade to a read lock.
- *  It can acquire a read lock before it releases the write lock to downgrade from a write lock to a read lock
- *  while ensuring that no other thread is permitted to acquire the write lock
- *  while it is in the process of downgrading.
-*/
+ * The AutoCloseableWriteLockImpl class provides a wrapper for a CloseableReadWriteLock object,
+ * allowing the thread that holds the write lock to downgrade to a read lock.
+ *
+ * This is done by acquiring a read lock before releasing the write lock,
+ * ensuring that no other thread can acquire the write lock while the thread is
+ * in the process of downgrading.
+ *
+ * It is important to note that the methods waitForCondition, signalAll, and
+ * signal are only usable with write-lock.
+ * If they are called with a read-lock, it will throw a LockException of
+ * 'invalid state'.
+ *
+ * Also the methods downgradeToReadLock and downgradeToReadLockInterruptibly
+ * should only be called after the thread has acquired a write lock.
+ * If they are called before a write lock is acquired, it will throw a
+ * LockException of 'invalid state'
+ */
+@SuppressWarnings("PMD.CommentSize")
 public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
 {
-    private CloseableReadWriteLock readWriteLock;
+    /** Read-Write-Lock used */
+    private final CloseableReadWriteLock readWriteLock;
 
-    private AutoCloseableLock autoCloseableReadLock;
-    private AutoCloseableLock autoCloseableWriteLock;
+    /** AutoCloseableLock for read-lock */
+    private AutoCloseableLock autoReadLock = NullAutoCloseableLock.INSTANCE;
+    /** AutoCloseableLock for write-lock */
+    private AutoCloseableLock autoWriteLock = NullAutoCloseableLock.INSTANCE;
 
+    /** default error text for invalid state errors */
     private static final String TXT_INVALID_STATE = "invalid state";
 
 
@@ -25,45 +42,56 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
      *
      *  @param  readWriteLock   use this ReadWriteLock as basis
      */
-    public AutoCloseableWriteLockImpl(CloseableReadWriteLock readWriteLock)
+    public AutoCloseableWriteLockImpl(final CloseableReadWriteLock readWriteLock)
     {
         this.readWriteLock = readWriteLock;
     }
 
-    void writeLock()
+    /**
+     * Obtain an exclusive write lock on the associated readWriteLock instance.
+     */
+    protected void writeLock()
     {
-        if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
+        if (autoWriteLock != NullAutoCloseableLock.INSTANCE || autoReadLock != NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableWriteLock = readWriteLock.getWriteLock().lock();
+        autoWriteLock = readWriteLock.lockWriteLock();
     }
 
-    void writeLockInterruptibly()
+    /**
+     *  Lock write-lock (interruptibly)
+     */
+    protected void writeLockInterruptibly()
     {
-        if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
+        if (autoWriteLock != NullAutoCloseableLock.INSTANCE || autoReadLock != NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableWriteLock = readWriteLock.getWriteLock().lockInterruptibly();
+        autoWriteLock = readWriteLock.lockWriteLockInterruptibly();
     }
 
-    void tryWriteLock(Duration timeout)
+    /**
+     * Try write-lock (with timeout).
+     *
+     * @param timeout duration to wait for the lock
+     */
+    protected void tryWriteLock(final Duration timeout)
     {
-        if (autoCloseableWriteLock != null || autoCloseableReadLock != null)
+        if (autoWriteLock != NullAutoCloseableLock.INSTANCE || autoReadLock != NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableWriteLock = readWriteLock.getWriteLock().tryLock(timeout);
+        autoWriteLock = readWriteLock.tryLockWriteLock(timeout);
     }
 
     /**
      *  Wait for timeout.
      */
     @Override
-    public void wait(Duration timeout)
+    public void wait(final Duration timeout)
     {
-        if (autoCloseableWriteLock == null)
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
@@ -71,75 +99,75 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
         {
             throw new LockException("invalid timeout value: " + timeout);
         }
-        readWriteLock.getWriteLock().waitForCondition(()->false, timeout);
+        readWriteLock.waitForWriteLockCondition(()->false, timeout);
     }
 
     @Override
     public void downgradeToReadLock()
     {
-        if (autoCloseableWriteLock == null)
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableReadLock = readWriteLock.getReadLock().lock();
-        autoCloseableWriteLock.close();
-        autoCloseableWriteLock = null;
+        autoReadLock = readWriteLock.readLock();
+        autoWriteLock.close();
+        autoWriteLock = NullAutoCloseableLock.INSTANCE;
     }
 
     @Override
     public void downgradeToReadLockInterruptibly()
     {
-        if (autoCloseableWriteLock == null)
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE)
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        autoCloseableReadLock = readWriteLock.getReadLock().lockInterruptibly();
-        autoCloseableWriteLock.close();
-        autoCloseableWriteLock = null;
+        autoReadLock = readWriteLock.readLockInterruptibly();
+        autoWriteLock.close();
+        autoWriteLock = NullAutoCloseableLock.INSTANCE;
     }
 
     @Override
-    public boolean waitForCondition(BooleanSupplier fCondition, Duration timeout)
+    public boolean waitForCondition(final BooleanSupplier fCondition, final Duration timeout)
     {
-        if (autoCloseableWriteLock == null) // only usable with write-lock
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE) // only usable with write-lock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        return readWriteLock.getWriteLock().waitForCondition(fCondition, timeout);
+        return readWriteLock.waitForWriteLockCondition(fCondition, timeout);
     }
 
     @Override
     public void signalAll()
     {
-        if (autoCloseableWriteLock == null) // only usable with write-lock
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE) // only usable with write-lock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        readWriteLock.getWriteLock().signalAll();
+        readWriteLock.signalAllWriteLock();
     }
 
     @Override
     public void signal()
     {
-        if (autoCloseableWriteLock == null) // only usable with write-lock
+        if (autoWriteLock == NullAutoCloseableLock.INSTANCE) // only usable with write-lock
         {
             throw new LockException(TXT_INVALID_STATE);
         }
-        readWriteLock.getWriteLock().signal();
+        readWriteLock.signalWriteLock();
     }
 
     @Override
     public void close()
     {
-        if (autoCloseableWriteLock != null)
+        if (autoWriteLock != NullAutoCloseableLock.INSTANCE)
         {
-            autoCloseableWriteLock.close();
-            autoCloseableWriteLock = null;
+            autoWriteLock.close();
+            autoWriteLock = NullAutoCloseableLock.INSTANCE;
         }
-        else if (autoCloseableReadLock != null)
+        if (autoReadLock != NullAutoCloseableLock.INSTANCE)
         {
-            autoCloseableReadLock.close();
-            autoCloseableReadLock = null;
+            autoReadLock.close();
+            autoReadLock = NullAutoCloseableLock.INSTANCE;
         }
     }
 }

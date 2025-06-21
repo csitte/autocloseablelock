@@ -1,27 +1,31 @@
 package com.csitte.autocloseablelock;
 
+/** Lock Runtime Exception */
 public class LockException extends RuntimeException
 {
     private static final long serialVersionUID = 1;
 
+    /** Constructor */
     public LockException()
     {
-        // empty constructor
+        super();
     }
 
-    public LockException(String msg)
+    /** Constructor */
+    public LockException(final String msg)
     {
         super(msg);
     }
 
-    public LockException(Throwable throwable)
+    /** Constructor */
+    public LockException(final Throwable throwable)
     {
         super(throwable);
     }
 
-    public LockException(String message, Throwable throwable)
+    /** Constructor */
+    public LockException(final String message, final Throwable throwable)
     {
         super(message, throwable);
     }
-
 }
