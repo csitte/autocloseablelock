@@ -9,12 +9,20 @@ import com.csitte.autocloseablelock.LockCondition;
 
 /**
  *	Represents an activity which has a start, some sort of activity and an end.
- *	Use the lock() method to access the resources of an activity.
- *  Use the waitForCondition() method to synchronize with any activity condition.
+ *
+ *  <p>Use the {@link #startActivity()} method to access the resources of an activity
+ *  and {@link #getCondition()} to synchronize with any activity condition.</p>
+ *
+ *  @param <T> type used for activity status
  */
 @SuppressWarnings("PMD.AtLeastOneConstructor")
 public class ActivityImpl<T> implements Activity<T>
 {
+    /** Default constructor */
+    public ActivityImpl() {
+        // nothing to initialize
+    }
+
     //- Activity timestamps
 
     /** Start-Of-Activity timestamp */

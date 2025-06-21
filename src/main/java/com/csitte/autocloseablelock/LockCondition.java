@@ -6,8 +6,11 @@ package com.csitte.autocloseablelock;
  * allowing threads to wait for a certain condition to be met before proceeding.
  *
  * Usage example:
- *  LockCondition<String> lockCondition = new LockCondition<>(closeableLock, "initial state");
+ *  {@code
+ *  LockCondition<String> lockCondition =
+ *      new LockCondition<>(closeableLock, "initial state");
  *  lockCondition.setState("new state");
+ *  }
  *
  * @param <T> the type of the state associated with the lock
  */
@@ -63,7 +66,7 @@ public class LockCondition<T>
     }
 
     /**
-     *  Convenience class for Boolean
+     *  Convenience class for Boolean.
      */
     public static class BooleanLockCondition extends LockCondition<Boolean>
     {
