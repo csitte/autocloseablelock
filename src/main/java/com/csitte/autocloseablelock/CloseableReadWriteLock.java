@@ -42,6 +42,8 @@ public class CloseableReadWriteLock
     }
 
     /**
+     * Returns the lock used for reading.
+     *
      * @return the lock used for reading
      */
     public CloseableLock getReadLock()
@@ -50,6 +52,8 @@ public class CloseableReadWriteLock
     }
 
     /**
+     * Returns the lock used for writing.
+     *
      * @return the lock used for writing
      */
     public CloseableLock getWriteLock()
@@ -70,7 +74,9 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return an {@link AutoCloseableLock} once the read-lock has been acquired.
+     * Acquires the read lock.
+     *
+     * @return an {@link AutoCloseableLock} once the read lock has been acquired
      */
     public AutoCloseableLock readLock()
     {
@@ -78,7 +84,9 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return an {@link AutoCloseableLock} once the read-lock has been acquired (interruptibly)
+     * Acquires the read lock interruptibly.
+     *
+     * @return an {@link AutoCloseableLock} once the read lock has been acquired
      */
     public AutoCloseableLock readLockInterruptibly()
     {
@@ -86,8 +94,9 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return an {@link AutoCloseableLock} once the write-lock has been acquired.
+     * Acquires the write lock.
      *
+     * @return an {@link AutoCloseableLock} once the write lock has been acquired
      * @see Lock#lock()
      */
     public AutoCloseableWriteLock writeLock()
@@ -98,8 +107,9 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return an {@link AutoCloseableLock} once the write-lock has been acquired.
+     * Acquires the write lock interruptibly.
      *
+     * @return an {@link AutoCloseableLock} once the write lock has been acquired
      * @see Lock#lockInterruptibly()
      */
     public AutoCloseableWriteLock writeLockInterruptibly()
@@ -110,9 +120,10 @@ public class CloseableReadWriteLock
     }
 
     /**
-     *  @param timeout  0==return immediately or throw LockException if locked
+     * Attempts to acquire the read lock within the given timeout.
      *
-     *  @return an {@link AutoCloseableLock} once the read-lock has been acquired.
+     * @param timeout  0 means return immediately or throw {@link LockException} if locked
+     * @return an {@link AutoCloseableLock} once the read lock has been acquired
      */
     public AutoCloseableLock tryReadLock(final Duration timeout)
     {
@@ -125,9 +136,10 @@ public class CloseableReadWriteLock
         return closeWriteLock.tryLock(timeout);
     }
     /**
-     *  @param timeout  0==return immediately or throw LockException if locked
+     * Attempts to acquire the write lock within the given timeout.
      *
-     *  @return an {@link AutoCloseableWriteLock} once the write-lock has been acquired.
+     * @param timeout  0 means return immediately or throw {@link LockException} if locked
+     * @return an {@link AutoCloseableWriteLock} once the write lock has been acquired
      */
     public AutoCloseableWriteLock tryWriteLock(final Duration timeout)
     {

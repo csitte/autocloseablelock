@@ -1,29 +1,46 @@
 package com.csitte.autocloseablelock;
 
-/** Lock Runtime Exception */
+/**
+ * Runtime exception used for lock related errors.
+ */
 public class LockException extends RuntimeException
 {
     private static final long serialVersionUID = 1;
 
-    /** Constructor */
+    /**
+     * Creates an instance with no detail message.
+     */
     public LockException()
     {
         super();
     }
 
-    /** Constructor */
+    /**
+     * Creates an instance with an error message.
+     *
+     * @param msg error message
+     */
     public LockException(final String msg)
     {
         super(msg);
     }
 
-    /** Constructor */
+    /**
+     * Creates an instance wrapping another exception.
+     *
+     * @param throwable the root cause
+     */
     public LockException(final Throwable throwable)
     {
         super(throwable);
     }
 
-    /** Constructor */
+    /**
+     * Creates an instance with a message and root cause.
+     *
+     * @param message    error message
+     * @param throwable  the root cause
+     */
     public LockException(final String message, final Throwable throwable)
     {
         super(message, throwable);

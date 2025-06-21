@@ -2,7 +2,9 @@ package com.csitte.autocloseablelock;
 
 import java.time.Duration;
 
-/** Runtime Exception for lock-timeout */
+/**
+ * Runtime exception thrown when a lock acquisition times out.
+ */
 public class LockTimeoutException extends LockException
 {
     private static final long serialVersionUID = 1;
@@ -34,7 +36,11 @@ public class LockTimeoutException extends LockException
         this.elapsedTime = elapsedTime;
     }
 
-    /** return elapsed time before timeout */
+    /**
+     * Returns the elapsed time before timeout.
+     *
+     * @return elapsed time before timeout
+     */
     public Duration getElapsedTime()
     {
         return elapsedTime;

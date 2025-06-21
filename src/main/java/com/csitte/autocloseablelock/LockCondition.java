@@ -54,7 +54,9 @@ public class LockCondition<T>
     }
 
     /**
-     *  @return current lock condition
+     * Returns the current lock condition.
+     *
+     * @return current lock condition
      */
     public T getState()
     {
@@ -70,12 +72,20 @@ public class LockCondition<T>
      */
     public static class BooleanLockCondition extends LockCondition<Boolean>
     {
-        /** Constructor */
+        /**
+         * Creates a boolean condition associated with the given lock.
+         *
+         * @param lock the associated lock
+         */
         public BooleanLockCondition(final CloseableLock lock)
         {
             super(lock, false);
         }
-        /** @return state is true */
+        /**
+         * Indicates whether the state is {@code true}.
+         *
+         * @return {@code true} if the state is true
+         */
         public boolean isTrue()
         {
             return Boolean.TRUE.equals(getState());
