@@ -6,29 +6,42 @@ import java.time.Duration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.csitte.activity.Activity;
+import com.csitte.activity.ActivityImpl;
 import com.csitte.autocloseablelock.AutoCloseableLock;
 import com.csitte.autocloseablelock.AutoCloseableWriteLock;
 import com.csitte.autocloseablelock.CloseableReadWriteLock;
 import com.csitte.autocloseablelock.LockCondition.BooleanLockCondition;
 
-public class DummyActivity extends Activity<String> implements Runnable
+
+@SuppressWarnings("PMD")
+public final class DummyActivity extends ActivityImpl<String> implements Runnable
 {
 	private static final Logger LOG = LogManager.getLogger(DummyActivity.class);
 
 	private BooleanLockCondition threadIsRunning;
-	private CloseableReadWriteLock closeableReadWriteLock = new CloseableReadWriteLock();
+	private final CloseableReadWriteLock closeableRWLock = new CloseableReadWriteLock();
 	private BooleanLockCondition shutdownRequest;
 
 
 	/**
 	 *	Constructor
 	 */
-	public DummyActivity()
+	private DummyActivity()
 	{
 		super();
-		shutdownRequest = new BooleanLockCondition(getLock());
-		threadIsRunning = new BooleanLockCondition(getLock());
+	}
+
+	private void initialize()
+	{
+	    shutdownRequest = new BooleanLockCondition(getLock());
+	    threadIsRunning = new BooleanLockCondition(getLock());
+	}
+
+	public static DummyActivity createInstance()
+	{
+	    final DummyActivity activity = new DummyActivity();
+	    activity.initialize();
+	    return activity;
 	}
 
 
@@ -36,6 +49,7 @@ public class DummyActivity extends Activity<String> implements Runnable
 	{
 		try (AutoCloseableLock acl = getLock().lock())
 		{
+		    assert acl != null;
 			threadIsRunning.setState(false);
 			LOG.debug("create & start ACTIVITY-THREAD");
 			new Thread(this, "ACTIVITY-THREAD").start();
@@ -49,12 +63,13 @@ public class DummyActivity extends Activity<String> implements Runnable
 		LOG.debug("start run()-method");
 		try (AutoCloseableLock acl = getLock().lock())
 		{
+		    assert acl != null;
 			threadIsRunning.setState(true);
 			for (int idx=1; idx <= 10; idx++)
 			{
 				LOG.debug("thread loop #{}", idx);
 				//- wait 1 second
-				if (getLock().waitForCondition(() -> isShutdownRequest(), Duration.ofSeconds(1)))
+				if (getLock().waitForCondition(this::isShutdownRequest, Duration.ofSeconds(1)))
 				{
 				    break;
 				}
@@ -73,14 +88,15 @@ public class DummyActivity extends Activity<String> implements Runnable
 	    return threadIsRunning.isTrue();
 	}
 
-	public boolean setShutdownRequest(boolean value)
+	public void setShutdownRequest(final boolean value)
 	{
-		try (AutoCloseableWriteLock acwl = closeableReadWriteLock.writeLock())
+		try (AutoCloseableWriteLock acwl = closeableRWLock.writeLock())
 		{
-		    Boolean prevValue = shutdownRequest.getState();
+		    //final Boolean prevValue =
+		    shutdownRequest.getState();
 			shutdownRequest.setState(value);
 			acwl.downgradeToReadLock(); // only for junit test
-			return prevValue;
+			//return prevValue;
 		}
 	}
 
