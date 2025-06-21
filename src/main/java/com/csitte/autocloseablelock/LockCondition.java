@@ -66,7 +66,7 @@ public class LockCondition<T>
     }
 
     /**
-     *  Convenience class for Boolean.
+     *  Convenience class for Boolean
      */
     public static class BooleanLockCondition extends LockCondition<Boolean>
     {

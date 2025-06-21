@@ -72,7 +72,9 @@ public class AutoCloseableWriteLockImpl implements AutoCloseableWriteLock
     }
 
     /**
-     *  Try write-lock (with timeout)
+     * Try write-lock (with timeout).
+     *
+     * @param timeout duration to wait for the lock
      */
     protected void tryWriteLock(final Duration timeout)
     {
