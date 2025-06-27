@@ -1,11 +1,17 @@
+/*
+ * Copyright 2022-2025 C.Sitte Softwaretechnik
+ * SPDX-License-Identifier: MIT
+ */
 package com.csitte.autocloseablelock;
 
 import java.time.Duration;
 
+/** Runtime Exception for lock-timeout */
 public class LockTimeoutException extends LockException
 {
     private static final long serialVersionUID = 1;
 
+    /** Elapsed time till timeout */
     private final Duration elapsedTime;
 
 
@@ -15,7 +21,7 @@ public class LockTimeoutException extends LockException
      *	@param	name			name of lock
      *	@param	elapsedTime		elapsed time waiting for a lock
      */
-    public LockTimeoutException(String name, Duration elapsedTime)
+    public LockTimeoutException(final String name, final Duration elapsedTime)
     {
         super(name + " - timeout after " + elapsedTime);
         this.elapsedTime = elapsedTime;
@@ -26,12 +32,15 @@ public class LockTimeoutException extends LockException
      *
      *	@param	elapsedTime		elapsed time waiting for a lock
      */
-    public LockTimeoutException(Duration elapsedTime)
+    public LockTimeoutException(final Duration elapsedTime)
     {
         super("timeout after " + elapsedTime);
         this.elapsedTime = elapsedTime;
     }
 
+    /**
+     *  @return elapsed time before timeout
+     */
     public Duration getElapsedTime()
     {
         return elapsedTime;

@@ -13,6 +13,7 @@ import com.csitte.autocloseablelock.AutoCloseableLock;
 import com.csitte.autocloseablelock.CloseableLock;
 import com.csitte.autocloseablelock.LockCondition;
 
+@SuppressWarnings("PMD")
 public class LockConditionTest
 {
     private static final Logger LOG = LogManager.getLogger(LockConditionTest.class);
