@@ -16,7 +16,7 @@ Add the following to the `<dependencies/>` section of your pom.xml -
 <dependency>
     <groupId>com.csitte</groupId>
     <artifactId>autocloseablelock</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
 </dependency>
 ```
 
