@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022-2025 C.Sitte Softwaretechnik
+ * SPDX-License-Identifier: MIT
+ */
 package com.csitte.autocloseablelock;
 
 import java.time.Duration;
@@ -8,9 +12,20 @@ import java.util.function.BooleanSupplier;
 
 
 /**
- *  Handles {@link ReadWriteLock}-type locks
+ * A {@link ReadWriteLock} wrapper that provides {@link CloseableLock} handles
+ * for both read and write locks. This simplifies the use of try-with-resources for
+ * lock management.
  *
- *  @author sit
+ * <p>Example usage:</p>
+ * <pre>{@code
+ *   CloseableReadWriteLock lock = new CloseableReadWriteLock();
+ *   try (CloseableLock readLock = lock.getReadLock()) {
+ *       // read operations
+ *   }
+ *   try (CloseableLock writeLock = lock.getWriteLock()) {
+ *       // write operations
+ *   }
+ * }</pre>
  */
 @SuppressWarnings({"PMD.CommentSize", "PMD.TooManyMethods"})
 public class CloseableReadWriteLock
@@ -42,7 +57,13 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return the lock used for reading
+     * Returns the read lock as a {@link CloseableLock}.
+     * <p>
+     * Use this to guard access to shared data during read operations.
+     * The returned lock can be used with try-with-resources for automatic release.
+     * </p>
+     *
+     * @return the read lock wrapper
      */
     public CloseableLock getReadLock()
     {
@@ -50,7 +71,13 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return the lock used for writing
+     * Returns the write lock as a {@link CloseableLock}.
+     * <p>
+     * Use this to guard access to shared data during write operations.
+     * The returned lock can be used with try-with-resources for automatic release.
+     * </p>
+     *
+     * @return the write lock wrapper
      */
     public CloseableLock getWriteLock()
     {
@@ -70,7 +97,9 @@ public class CloseableReadWriteLock
     }
 
     /**
-     * @return an {@link AutoCloseableLock} once the read-lock has been acquired.
+     * Acquires the read lock and returns it wrapped in an {@link AutoCloseableLock}.
+     *
+     * @return an {@code AutoCloseableLock} for managing the read lock
      */
     public AutoCloseableLock readLock()
     {

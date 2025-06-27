@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022-2025 C.Sitte Softwaretechnik
+ * SPDX-License-Identifier: MIT
+ */
 package com.csitte.autocloseablelock;
 
 import java.time.Duration;
@@ -34,7 +38,9 @@ public class LockTimeoutException extends LockException
         this.elapsedTime = elapsedTime;
     }
 
-    /** return elapsed time before timeout */
+    /**
+     *  @return elapsed time before timeout
+     */
     public Duration getElapsedTime()
     {
         return elapsedTime;

@@ -1,3 +1,7 @@
+/*
+ * Copyright 2022-2025 C.Sitte Softwaretechnik
+ * SPDX-License-Identifier: MIT
+ */
 package com.csitte.autocloseablelock;
 
 
@@ -66,16 +70,24 @@ public class LockCondition<T>
     }
 
     /**
-     *  Convenience class for Boolean
+     * Convenience wrapper for a {@link LockCondition} with a {@link Boolean} state.
+     *
+     * The condition is initialized with the value {@code false}.
      */
     public static class BooleanLockCondition extends LockCondition<Boolean>
     {
-        /** Constructor */
+        /**
+         * Constructs a {@code BooleanLockCondition} bound to the given lock and an initial state of {@code false}.
+         *
+         * @param lock the {@link CloseableLock} to synchronize access to the boolean state
+         */
         public BooleanLockCondition(final CloseableLock lock)
         {
             super(lock, false);
         }
-        /** @return state is true */
+        /**
+         * @return {@code true} if the current state equals {@code Boolean.TRUE}
+         */
         public boolean isTrue()
         {
             return Boolean.TRUE.equals(getState());
