@@ -61,7 +61,7 @@ Use it with the try-with-resources feature:
 CloseableLock myLock = new CloseableLock(new ReentrantLock());
 void method()
 {
-    try (AutoCloseableLock autoCloseableLock = myLock.lock())
+    try (AutoCloseableLock ignored = myLock.lock())
     {
         doSomething();
     }
@@ -77,7 +77,7 @@ When the scope is exited, it is ensured that the lock will be released.
 ```java
 CloseableLock myLock = new CloseableLock();
 Duration timeout = Duration.ofSeconds(10);
-try (AutoCloseableLock autoCloseableLock = myLock.tryLock(timeout))
+try (AutoCloseableLock ignored = myLock.tryLock(timeout))
 {
     doSomething();
 }
