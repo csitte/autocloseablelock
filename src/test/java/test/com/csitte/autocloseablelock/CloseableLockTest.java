@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
+
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,6 +23,7 @@ import com.csitte.autocloseablelock.AutoCloseableLock;
 import com.csitte.autocloseablelock.CloseableLock;
 import com.csitte.autocloseablelock.LockCondition.BooleanLockCondition;
 import com.csitte.autocloseablelock.LockException;
+import com.csitte.autocloseablelock.LockTimeoutException;
 
 import test.com.csitte.autocloseablelock.CloseableLockTest.ThreadObject.MODE;
 
@@ -137,10 +140,53 @@ public class CloseableLockTest
     }
 
     /**
+     * tryLock must succeed once the lock is released by the holding thread.
+     */
+    @ParameterizedTest
+    @EnumSource(value = MODE.class, names = { "TRY_LOCK_ZERO", "TRY_LOCK_NULL"})
+    void testTryLockSuccessAfterRelease(MODE mode) throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        ThreadObject thread = new ThreadObject(lock, mode, null);
+        thread.start();
+        thread.join(500);
+        assertTrue(thread.isFinished(), "Thread should finish quickly");
+        assertNull(thread.getException(), "Should acquire lock after release");
+    }
+
+    /**
+     * Multi-second tryLock timeouts must use total nanoseconds, not only the nanosecond component.
+     */
+    @Test
+    void testTryLockMultiSecondTimeout() throws InterruptedException
+    {
+        CloseableLock lock = new CloseableLock();
+        try (AutoCloseableLock acl = lock.lock())
+        {
+            final long startNanos = System.nanoTime();
+            ThreadObject thread = new ThreadObject(lock, MODE.TRY_LOCK_1S_TIMEOUT, null);
+            thread.start();
+
+            //- Keep the lock held; do not use lock.wait() because that releases the lock.
+            Thread.sleep(1500);
+            thread.join(500);
+
+            assertTrue(thread.isFinished(), "Thread should finish after timeout elapses");
+            assertNotNull(thread.getException(), "Should throw when lock stays unavailable");
+            assertTrue(thread.getException() instanceof LockTimeoutException,
+                    "Expected LockTimeoutException but got " + thread.getException());
+
+            final long elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000L;
+            assertTrue(elapsedMillis >= 900,
+                    "Timeout should wait roughly one second, but elapsed=" + elapsedMillis + "ms");
+        }
+    }
+
+    /**
      * Tests for tryLock() method with negative timeout, which should wait indefinitely until lock is acquired
      */
     @Test
-    public void testTryLockNeg()
+    public void testTryLockNeg() throws InterruptedException
     {
         boolean status;
         ThreadObject thread;
@@ -149,12 +195,11 @@ public class CloseableLockTest
         {
             thread = new ThreadObject(lock, MODE.TRY_LOCK_NEG, null); // wait w/o timeout
             thread.start();
-            //- Wait (max 500ms) until thread is started
-            status = lock.waitForCondition(()->thread.isStarted(), MS500);
-            assertTrue(status);
+            //- Poll without waitForCondition: awaiting would release the lock.
+            waitUntilStarted(thread, MS500);
             assertFalse(thread.isFinished()); // thread should be waiting
 
-            //- Wait (max 500ms) until thread is finished
+            //- Wait (max 500ms) until thread is finished; await releases the lock for the worker.
             status = lock.waitForCondition(()->thread.isFinished(), MS500);
         }
         assertTrue(status); // thread-is-finished == true
@@ -211,6 +256,19 @@ public class CloseableLockTest
     {
         ReentrantLock baseLock = new ReentrantLock();
         new CloseableLock(baseLock);
+    }
+
+    @Test
+    void testLockConstructorRejectsNull()
+    {
+        assertThrows(NullPointerException.class, () -> new CloseableLock(null));
+    }
+
+    @Test
+    void testWaitForConditionRejectsNullSupplier()
+    {
+        CloseableLock lock = new CloseableLock();
+        assertThrows(NullPointerException.class, () -> lock.waitForCondition(null, MS500));
     }
 
     /**
@@ -274,14 +332,17 @@ public class CloseableLockTest
      * With lazy initialization, this should not create a Condition.
      */
     @Test
-    void testSignalAllWithoutWaiters()
+    void testSignalAllWithoutWaiters() throws Exception
     {
         CloseableLock lock = new CloseableLock();
+        final Field conditionField = CloseableLock.class.getDeclaredField("condition");
+        conditionField.setAccessible(true);
 
         // Should not throw, should return immediately (no condition created)
         try (AutoCloseableLock autoLock = lock.lock())
         {
             lock.signalAll();
+            assertNull(conditionField.get(lock), "signalAll must not create a Condition");
         }
     }
 
@@ -308,7 +369,7 @@ public class CloseableLockTest
         CloseableLock lock = new CloseableLock();
 
         // Access condition field via reflection to verify it's null initially
-        java.lang.reflect.Field conditionField = CloseableLock.class.getDeclaredField("condition");
+        final Field conditionField = CloseableLock.class.getDeclaredField("condition");
         conditionField.setAccessible(true);
 
         assertNull(conditionField.get(lock), "Condition should be null initially");
@@ -343,6 +404,16 @@ public class CloseableLockTest
 
 
 
+    private static void waitUntilStarted(final ThreadObject thread, final Duration timeout) throws InterruptedException
+    {
+        final long deadline = System.nanoTime() + timeout.toNanos();
+        while (!thread.isStarted() && System.nanoTime() < deadline)
+        {
+            Thread.sleep(5);
+        }
+        assertTrue(thread.isStarted(), "Thread should start within " + timeout);
+    }
+
     /**
      * Helper Object
      */
@@ -361,6 +432,8 @@ public class CloseableLockTest
             TRY_LOCK_NEG,
             /** tryLock with 200ms timeout, which should wait until timeout and throw exception */
             TRY_LOCK_200MS_TIMEOUT,
+            /** tryLock with 1s timeout, which should wait until timeout and throw exception */
+            TRY_LOCK_1S_TIMEOUT,
             /** wait for 500ms, which should be interrupted and throw exception */
             WAIT_500MS;
         };
@@ -441,6 +514,12 @@ public class CloseableLockTest
 
                     case TRY_LOCK_200MS_TIMEOUT:
                         try (AutoCloseableLock acl = lock.tryLock(Duration.ofMillis(200))) // wait with 200ms timeout
+                        {
+                        }
+                        break;
+
+                    case TRY_LOCK_1S_TIMEOUT:
+                        try (AutoCloseableLock acl = lock.tryLock(Duration.ofSeconds(1))) // wait with 1s timeout
                         {
                         }
                         break;

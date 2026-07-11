@@ -118,7 +118,7 @@ public class ActivityImpl<T> implements Activity<T>
     public T getStatus()
     {
         return getCondition().getState();
-	}
+    }
 
     /**
      *	Start activity.

@@ -107,8 +107,7 @@ public class CloseableLock
      *  Acquires the lock if it is free within the given waiting time and the
      *  current thread has not been {@linkplain Thread#interrupt interrupted}.
      *
-     *  It uses a timeout loop that re-evaluates the remaining wait time
-     *  and it uses ChronoUnit.NANOS to get the remaining wait time in nanoseconds.
+     *  It uses a timeout loop that re-evaluates the remaining wait time in nanoseconds.
      *
      *  @param timeout  null or 0 means: Return immediately or throw LockException if locked.
      *                  A negative timeout value means to wait without timeout.
@@ -266,9 +265,10 @@ public class CloseableLock
      *
      *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results.
      *                      Callers must call signal()/signalAll() after state changes.
-     *  @param  timeout     null or 0 means: no timeout
+     *  @param  timeout     null, zero, or negative means: no timeout
      *
-     *  @return true == condition met; false == timeout or interrupt occurred
+     *  @return true if the condition was met; false on timeout
+     *  @throws LockException if the waiting thread is interrupted
      */
     public boolean waitForCondition(final BooleanSupplier fCondition, final Duration timeout)
     {

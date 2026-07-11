@@ -115,7 +115,7 @@ else
             
 A timeout value of zero means that the method only returns when the condition is true.
 Any other thread can use the `CloseableLock.signalAll()` method to signal waiting threads of a change in condition.
-Otherwise, the test is performed at one-second intervals.
+Waiting threads are woken by `signal()`/`signalAll()` and re-check the condition under the lock.
 
 ## ReadWriteLock
 
