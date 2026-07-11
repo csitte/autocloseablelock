@@ -16,10 +16,16 @@ import com.csitte.autocloseablelock.AutoCloseableWriteLockImpl;
 import com.csitte.autocloseablelock.CloseableReadWriteLock;
 import com.csitte.autocloseablelock.LockException;
 
+/**
+ * Unit tests for {@link AutoCloseableWriteLockImpl}.
+ */
 @SuppressWarnings("PMD")
 public class AutoCloseableWriteLockImplTest
 {
 
+    /**
+     *  Test write-lock and unlock, downgrade to read-lock, and call extra close.
+     */
     @Test
     public void testWriteLock()
     {
@@ -58,6 +64,10 @@ public class AutoCloseableWriteLockImplTest
         lock.close();
     }
 
+    /**
+     *  Test write-lock interruptibly, and interrupt while waiting for the lock.
+     *  @throws InterruptedException
+     */
     @Test
     public void testWriteLockInterruptibly() throws InterruptedException
     {
@@ -90,6 +100,10 @@ public class AutoCloseableWriteLockImplTest
         assertEquals("invalid state", exception.getMessage());
     }
 
+    /**
+     *  Test try write-lock with timeout, and call try write-lock again while holding the lock.
+     *  @throws InterruptedException
+     */
     @Test
     public void testTryWriteLock() throws InterruptedException
     {
@@ -111,8 +125,16 @@ public class AutoCloseableWriteLockImplTest
         assertEquals("invalid state", exception.getMessage());
     }
 
+    /**
+     *  Test try write-lock with timeout, and call try write-lock again while holding the lock.
+     */
     public static class AutoCloseableWriteLockImplWrapper extends AutoCloseableWriteLockImpl
     {
+        /**
+         *  Constructor.
+         *
+         *  @param readWriteLock the lock to acquire
+         */
         public AutoCloseableWriteLockImplWrapper(CloseableReadWriteLock readWriteLock)
         {
             super(readWriteLock);
@@ -134,11 +156,18 @@ public class AutoCloseableWriteLockImplTest
         }
     }
 
+    /**
+     *  Runnable object for testing write-lock interruptibly and interrupting while waiting for the lock.
+     */
     public static class RunnableObject implements Runnable
     {
         private CloseableReadWriteLock lock;
         private Exception exception;
 
+        /**
+         *  Constructor.
+         *  @param lock the lock to acquire
+         */
         public RunnableObject(CloseableReadWriteLock lock)
         {
             this.lock = lock;
@@ -155,10 +184,13 @@ public class AutoCloseableWriteLockImplTest
                 exception = x;
             }
         }
+        /**
+         *  Get the exception thrown while trying to acquire the lock.
+         *  @return the exception, or null if no exception was thrown.
+         */
         public Exception getException()
         {
             return exception;
         }
     }
-
 }

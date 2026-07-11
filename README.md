@@ -221,3 +221,52 @@ void waitUntilActivityHasFinished()
     myLock.waitForCondition(() -> finished.isTrue(), timeout);    
 }
 ```
+
+## Building from Source
+
+### Requirements
+- Java 8+ JDK (the project targets Java 8 for maximum compatibility)
+- Apache Maven 3.6.3 or newer
+
+### Quick Build
+```bash
+git clone https://github.com/csitte/autocloseablelock.git
+cd autocloseablelock
+mvn clean verify
+```
+
+This runs:
+- Compilation
+- All unit tests
+- PMD static analysis and copy-paste detection (CPD)
+- Attaches source and javadoc JARs
+
+A plain `mvn clean install` or `mvn clean verify` works for everyday development without any special flags.
+
+### Maven Profiles
+
+| Profile   | Purpose                                      | Typical Command                     | Notes |
+|-----------|----------------------------------------------|-------------------------------------|-------|
+| (none)    | Standard development / CI build              | `mvn clean verify`                  | No GPG signing. Recommended for local work. |
+| `release` | Enable GPG signing of artifacts              | `mvn clean verify -P release`       | Required for Maven Central publication. Needs configured GPG key. |
+| `snapshot`| Configure snapshot distribution repository   | `mvn ... -P snapshot`               | Rarely needed directly. |
+
+To perform a full release build with signatures:
+
+```bash
+mvn clean verify -P release
+```
+
+**GPG note**: The `release` profile activates `maven-gpg-plugin`. You must have a GPG secret key available (and usually Sonatype Central credentials configured in `~/.m2/settings.xml` or via environment). See the [Sonatype GPG requirements](https://central.sonatype.org/publish/requirements/gpg/).
+
+## Releasing (Maintainers)
+
+This project is published to [Maven Central](https://search.maven.org/artifact/com.csitte/autocloseablelock) using the [central-publishing-maven-plugin](https://central.sonatype.org/publish/publish-portal-maven/).
+
+High-level release flow:
+1. Update version in `pom.xml` (remove `-SNAPSHOT` for the release).
+2. Commit and tag the release.
+3. Run a signed build: `mvn clean deploy -P release` (or follow the Central Portal deployment process).
+4. After successful publication, bump the version to the next `-SNAPSHOT`.
+
+The GitHub repository contains the authoritative history and any additional release notes.

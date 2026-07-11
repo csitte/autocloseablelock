@@ -19,7 +19,6 @@ import com.csitte.autocloseablelock.LockCondition;
  *
  *  @param <T> type used for activity status
  */
-@SuppressWarnings("PMD.AtLeastOneConstructor")
 public class ActivityImpl<T> implements Activity<T>
 {
     /** Default constructor */

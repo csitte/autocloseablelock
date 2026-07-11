@@ -6,7 +6,7 @@ package com.csitte.autocloseablelock;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -40,14 +40,9 @@ public class CloseableLock
     private final Lock myLock;
 
     /**
-     *  Optional {@link Condition}-object.
-     *  Will be created only on demand.
+     *  Lazily created {@link Condition}-object.
      */
     private Condition condition;
-
-    /** One Second Constant */
-    private static final long SECOND_IN_NANOS = 1_000_000_000L;
-
 
     /**
      *  Default Constructor.
@@ -66,7 +61,7 @@ public class CloseableLock
      */
     public CloseableLock(final Lock lock)
     {
-        this.myLock = lock;
+        this.myLock = Objects.requireNonNull(lock, "lock");
     }
 
     /**
@@ -153,7 +148,7 @@ public class CloseableLock
         {
             final Instant startOfWait = Instant.now();
             Duration remainingWaitTime = timeout;
-            while (!myLock.tryLock(remainingWaitTime.get(ChronoUnit.NANOS), TimeUnit.NANOSECONDS))
+            while (!myLock.tryLock(toNanosClamped(remainingWaitTime), TimeUnit.NANOSECONDS))
             {
                 final Duration elapsedTime = Duration.between(startOfWait, Instant.now());
                 remainingWaitTime = timeout.minus(elapsedTime);
@@ -189,20 +184,34 @@ public class CloseableLock
         waitForCondition(()->false, timeout);
     }
 
-    /**
-     *  @return Condition instance that is bound to this Lock.
-     *          The condition is created on the first call to this method
-     *
-     *  @see Lock#newCondition()
-     */
+   /**
+    *  @return Condition instance that is bound to this Lock.
+    *          Created on first access.
+    *
+    *  @see Lock#newCondition()
+    */
     protected Condition getOrCreateCondition()
     {
-        if (condition == null)
+        Condition result = condition;
+        if (result == null)
         {
-            condition = myLock.newCondition();
+            myLock.lock();
+            try
+            {
+                result = condition;
+                if (result == null)
+                {
+                    condition = result = myLock.newCondition();
+                }
+            }
+            finally
+            {
+                myLock.unlock();
+            }
         }
-        return condition;
-    }
+        return result;
+   }
+
 
     /**
      *  Wakes up all threads which are waiting for the condition.
@@ -214,8 +223,7 @@ public class CloseableLock
         try (AutoCloseableLock autoCloseableLock = lock())
         {
             assert autoCloseableLock != null; // ignored on runtime
-            if (condition != null)
-            {
+            if (condition != null) {
                 //- only if condition is in use
                 condition.signalAll();
             }
@@ -235,9 +243,8 @@ public class CloseableLock
         try (AutoCloseableLock autoCloseableLock = lock())
         {
             assert autoCloseableLock != null; // ignored on runtime
-            if (condition != null)
-            {
-                //- only if condition is in use
+            //- only if condition is in use
+            if (condition != null) {
                 condition.signal();
             }
         }
@@ -254,69 +261,73 @@ public class CloseableLock
     /**
      *  Wait for condition to become true or timeout.
      *
-     *  Returns immediately if condition is met.
-     *
      *  @see Condition#await()
      *  @see Condition#awaitNanos(long)
      *
-     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results.
+     *                      Callers must call signal()/signalAll() after state changes.
      *  @param  timeout     null or 0 means: no timeout
      *
      *  @return true == condition met; false == timeout or interrupt occurred
      */
     public boolean waitForCondition(final BooleanSupplier fCondition, final Duration timeout)
     {
-        boolean result = true;
-        if (!fCondition.getAsBoolean()) // test condition
+        Objects.requireNonNull(fCondition, "fCondition");
+        try (AutoCloseableLock autoCloseableLock = lock())
         {
-            try (AutoCloseableLock autoCloseableLock = lock())
+            assert autoCloseableLock != null; // ignored on runtime
+
+            //- calculate end of wait if valid timeout parameter is available
+            final Instant startOfWait = Instant.now();
+            Instant endOfWait = null;
+            if (timeout != null && !timeout.isZero() && !timeout.isNegative())
             {
-                assert autoCloseableLock != null; // ignored on runtime
-                //- calculate end of wait if valid timeout parameter is available
-                final Instant startOfWait = Instant.now();
-                Instant endOfWait = null;
-                if (timeout != null && !timeout.isZero() && !timeout.isNegative())
-                {
-                    endOfWait = startOfWait.plus(timeout);
-                }
-                try
-                {
-                    result = waitForCondition(fCondition, endOfWait);
-                }
-                catch (InterruptedException x)
-                {
-                    Thread.currentThread().interrupt();
-                    throw new LockException("interrupted", x);
-                }
+                endOfWait = startOfWait.plus(timeout);
+            }
+            try
+            {
+                //- Predicate is evaluated under the lock to avoid missed signals.
+                return waitForCondition(fCondition, endOfWait);
+            }
+            catch (InterruptedException x)
+            {
+                Thread.currentThread().interrupt();
+                throw new LockException("interrupted", x);
             }
         }
-        return result;
     }
 
+    /**
+     * Wait for condition to become true or timeout (internal method).
+     * This method is called from waitForCondition(BooleanSupplier, Duration)
+     * and it is executed with the lock held.
+     *
+     * @param   fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *                      Callers must call signal()/signalAll() after state changes.
+     *
+     * @param   endOfWait   null means: no timeout
+     *
+     * @return  true == condition met; false == timeout
+     * @throws  InterruptedException
+     */
     private boolean waitForCondition(final BooleanSupplier fCondition, final Instant endOfWait) throws InterruptedException
     {
-        boolean result = true;
-        do
+        //- Always check under lock before awaiting (avoids unnecessary waiting).
+        while (!fCondition.getAsBoolean())
         {
-            long nanos = SECOND_IN_NANOS; // default wait-interval
-            if (endOfWait != null)
+            if (endOfWait == null)
             {
-                final Instant now = Instant.now();
-                final long remainingWaitTime = Duration.between(now, endOfWait).toNanos();
-                if (remainingWaitTime <= 0) // timeout
-                {
-                    result = false;
-                    break; // return;
-                }
-                if (remainingWaitTime < SECOND_IN_NANOS) // wait less than default interval?
-                {
-                    nanos = remainingWaitTime;
-                }
+                getOrCreateCondition().await();
+                continue;
             }
-            getOrCreateCondition().awaitNanos(nanos);
+            final long remainingNanos = Duration.between(Instant.now(), endOfWait).toNanos();
+            if (remainingNanos <= 0)
+            {
+                return false; // timeout
+            }
+            getOrCreateCondition().awaitNanos(remainingNanos);
         }
-        while (!fCondition.getAsBoolean()); // test condition
-        return result;
+        return true;
     }
 
 
@@ -324,11 +335,24 @@ public class CloseableLock
      *  Wait for condition to become true.
      *
      *  @param  fCondition  Represents a supplier of {@code boolean}-valued condition results
+     *                      Callers must call signal()/signalAll() after state changes.
      *
      *  @throws LockException if interrupted
      */
     public void waitForCondition(final BooleanSupplier fCondition)
     {
         waitForCondition(fCondition, (Duration)null);
+    }
+
+    private static long toNanosClamped(final Duration duration)
+    {
+        try
+        {
+            return duration.toNanos();
+        }
+        catch (ArithmeticException x)
+        {
+            return Long.MAX_VALUE;
+        }
     }
 }
