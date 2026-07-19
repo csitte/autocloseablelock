@@ -41,8 +41,10 @@ public class CloseableLock
 
     /**
      *  Lazily created {@link Condition}-object.
+     *  Declared volatile for safe publication via double-checked locking
+     *  in {@link #getOrCreateCondition()}.
      */
-    private Condition condition;
+    private volatile Condition condition;
 
     /**
      *  Default Constructor.
