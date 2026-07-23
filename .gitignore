@@ -1,5 +1,7 @@
 /.settings/
 /.classpath
 /.project
+/local-scripts/*
+!/local-scripts/README.md
 /.pmd
 /target/

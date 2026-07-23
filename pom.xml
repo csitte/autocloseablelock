@@ -6,7 +6,7 @@
   
   <groupId>com.csitte</groupId>
   <artifactId>autocloseablelock</artifactId>
-  <version>1.2</version>
+  <version>1.3</version>
   <packaging>jar</packaging>
 
   <name>AutoCloseableLock</name>
@@ -45,24 +45,49 @@
   <profiles>
     <profile>
       <id>release</id>
-      <properties>
-        <publishing.serverId>release</publishing.serverId>
-      </properties>
+      <build>
+        <plugins>
+          <!--
+            GPG signing is only performed for releases.
+            Activate with: mvn ... -P release
+            Requires a properly configured GPG key (and usually the central publishing credentials).
+            See https://central.sonatype.org/publish/requirements/gpg/
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
+
     <profile>
       <id>snapshot</id>
-      <properties>
-        <publishing.serverId>snapshots</publishing.serverId>
-      </properties>
       <distributionManagement>
         <snapshotRepository>
-          <id>snapshots</id>
+          <id>central</id>
           <url>https://central.sonatype.com/repository/maven-snapshots/</url>
         </snapshotRepository>
       </distributionManagement>
     </profile>
   </profiles>
-      
+
   <build>
       <plugins>
           <plugin>
@@ -71,7 +96,7 @@
             <version>0.8.0</version>
             <extensions>true</extensions>
             <configuration>
-              <publishingServerId>${publishing.serverId}</publishingServerId>
+              <publishingServerId>central</publishingServerId>
             </configuration>
           </plugin>
 
@@ -109,29 +134,8 @@
 
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.2.7</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-                <configuration>
-                  <gpgArguments>
-                    <arg>--pinentry-mode</arg>
-                    <arg>loopback</arg>
-                  </gpgArguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.2.1</version>
+            <version>3.3.1</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -167,7 +171,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-pmd-plugin</artifactId>
-            <version>3.26.0</version>
+            <version>3.27.0</version>
             <executions>
                 <execution>
                     <goals>
@@ -203,22 +207,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.26.0</version>
+                <version>3.27.0</version>
             </plugin>
         </plugins>
       </reporting>
     
-      <distributionManagement>
-        <snapshotRepository>
-          <id>snapshots</id>
-          <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-          <id>ossrh</id>
-          <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-      </distributionManagement>
-      
   <properties>
     <java.version>1.8</java.version>
     <maven.compiler.target>8</maven.compiler.target>
@@ -228,6 +221,12 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <log4j.version>2.23.1</log4j.version>
     <junit.jupiter.version>5.13.1</junit.jupiter.version>
+
+    <!--
+      Maven 3.9+ warns when plugins directly modify project source roots via List#add().
+      This project doesn't depend on that behaviour, so we disable the warning to keep builds clean.
+    -->
+    <maven.project.sourceRoots.warningsDisabled>true</maven.project.sourceRoots.warningsDisabled>
   </properties>
 
   <dependencies>
