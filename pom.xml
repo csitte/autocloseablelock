@@ -10,7 +10,8 @@
   <packaging>jar</packaging>
 
   <name>AutoCloseableLock</name>
-  <description>Java AutoCloseable Lock</description>
+  <description>AutoCloseable wrappers for Java locks (ReentrantLock, ReadWriteLock) enabling safe try-with-resources
+    lock handling with timeout and condition-waiting support. Java 8 compatible.</description>
   <url>https://github.com/csitte/autocloseablelock</url>
 
   <organization>
