@@ -97,6 +97,8 @@
             <extensions>true</extensions>
             <configuration>
               <publishingServerId>central</publishingServerId>
+              <!-- Publish automatically after successful validation (no manual click in the Central Portal) -->
+              <autoPublish>true</autoPublish>
             </configuration>
           </plugin>
 
