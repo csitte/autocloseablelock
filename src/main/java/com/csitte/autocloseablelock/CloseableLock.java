@@ -5,7 +5,6 @@
 package com.csitte.autocloseablelock;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -23,6 +22,10 @@ import java.util.function.BooleanSupplier;
  *
  * This class does not implement the Lock interface in order to ensure
  * that it can only be used through the try-with-resources mechanism.
+ *
+ * The supplied lock must be reentrant (e.g. {@link ReentrantLock} or the write lock of a
+ * {@link java.util.concurrent.locks.ReentrantReadWriteLock ReentrantReadWriteLock}),
+ * because internal operations may re-acquire the lock while it is already held.
  *
  * It properly handles InterruptedExceptions and throws a custom LockException when appropriate.
  *
@@ -109,7 +112,8 @@ public class CloseableLock
      *  Acquires the lock if it is free within the given waiting time and the
      *  current thread has not been {@linkplain Thread#interrupt interrupted}.
      *
-     *  It uses a timeout loop that re-evaluates the remaining wait time in nanoseconds.
+     *  The waiting time is measured with the monotonic clock ({@link System#nanoTime()}),
+     *  so changes of the system (wall) clock do not affect the timeout.
      *
      *  @param timeout  null or 0 means: Return immediately or throw LockException if locked.
      *                  A negative timeout value means to wait without timeout.
@@ -147,23 +151,17 @@ public class CloseableLock
     {
         try
         {
-            final Instant startOfWait = Instant.now();
-            Duration remainingWaitTime = timeout;
-            while (!myLock.tryLock(toNanosClamped(remainingWaitTime), TimeUnit.NANOSECONDS))
+            final long startNanos = System.nanoTime();
+            if (!myLock.tryLock(toNanosClamped(timeout), TimeUnit.NANOSECONDS))
             {
-                final Duration elapsedTime = Duration.between(startOfWait, Instant.now());
-                remainingWaitTime = timeout.minus(elapsedTime);
-                if (remainingWaitTime.isZero() || remainingWaitTime.isNegative())
-                {
-                    throw new LockTimeoutException(elapsedTime);
-                }
+                throw new LockTimeoutException(Duration.ofNanos(System.nanoTime() - startNanos));
             }
-          }
-          catch (InterruptedException x)
-          {
-              Thread.currentThread().interrupt();
-              throw new LockException(x);
-          }
+        }
+        catch (InterruptedException x)
+        {
+            Thread.currentThread().interrupt();
+            throw new LockException(x);
+        }
     }
 
     /**
@@ -174,23 +172,25 @@ public class CloseableLock
      *  @see Condition#await()
      *  @see Condition#awaitNanos(long)
      *
-     *  @throws LockException on invalid timeout value
+     *  @throws LockException if timeout is null, zero or negative
      */
     public void wait(final Duration timeout)
     {
-        if (timeout == null || timeout.isZero())
+        if (timeout == null || timeout.isZero() || timeout.isNegative())
         {
             throw new LockException("invalid timeout value: " + timeout);
         }
         waitForCondition(()->false, timeout);
     }
 
-   /**
-    *  @return Condition instance that is bound to this Lock.
-    *          Created on first access.
-    *
-    *  @see Lock#newCondition()
-    */
+    /**
+     *  @return Condition instance that is bound to this Lock.
+     *          Created on first access.
+     *          Re-acquires the lock during creation; the lock must therefore be reentrant
+     *          if this method is called while the lock is already held.
+     *
+     *  @see Lock#newCondition()
+     */
     protected Condition getOrCreateCondition()
     {
         Condition result = condition;
@@ -211,7 +211,7 @@ public class CloseableLock
             }
         }
         return result;
-   }
+    }
 
 
     /**
@@ -224,7 +224,8 @@ public class CloseableLock
         try (AutoCloseableLock autoCloseableLock = lock())
         {
             assert autoCloseableLock != null; // ignored on runtime
-            if (condition != null) {
+            if (condition != null)
+            {
                 //- only if condition is in use
                 condition.signalAll();
             }
@@ -245,7 +246,8 @@ public class CloseableLock
         {
             assert autoCloseableLock != null; // ignored on runtime
             //- only if condition is in use
-            if (condition != null) {
+            if (condition != null)
+            {
                 condition.signal();
             }
         }
@@ -262,6 +264,9 @@ public class CloseableLock
     /**
      *  Wait for condition to become true or timeout.
      *
+     *  The waiting time is measured with the monotonic clock (see {@link Condition#awaitNanos(long)}),
+     *  so changes of the system (wall) clock do not affect the timeout.
+     *
      *  @see Condition#await()
      *  @see Condition#awaitNanos(long)
      *
@@ -275,21 +280,31 @@ public class CloseableLock
     public boolean waitForCondition(final BooleanSupplier fCondition, final Duration timeout)
     {
         Objects.requireNonNull(fCondition, "fCondition");
+        final boolean noTimeout = timeout == null || timeout.isZero() || timeout.isNegative();
         try (AutoCloseableLock autoCloseableLock = lock())
         {
             assert autoCloseableLock != null; // ignored on runtime
-
-            //- calculate end of wait if valid timeout parameter is available
-            final Instant startOfWait = Instant.now();
-            Instant endOfWait = null;
-            if (timeout != null && !timeout.isZero() && !timeout.isNegative())
-            {
-                endOfWait = startOfWait.plus(timeout);
-            }
             try
             {
-                //- Predicate is evaluated under the lock to avoid missed signals.
-                return waitForCondition(fCondition, endOfWait);
+                //- The predicate is always evaluated under the lock to avoid missed signals.
+                long remainingNanos = noTimeout? 0L : toNanosClamped(timeout);
+                while (!fCondition.getAsBoolean())
+                {
+                    if (noTimeout)
+                    {
+                        getOrCreateCondition().await();
+                    }
+                    else if (remainingNanos <= 0L)
+                    {
+                        return false; // timeout
+                    }
+                    else
+                    {
+                        //- awaitNanos() returns the remaining wait time and handles spurious wakeups
+                        remainingNanos = getOrCreateCondition().awaitNanos(remainingNanos);
+                    }
+                }
+                return true;
             }
             catch (InterruptedException x)
             {
@@ -297,39 +312,6 @@ public class CloseableLock
                 throw new LockException("interrupted", x);
             }
         }
-    }
-
-    /**
-     * Wait for condition to become true or timeout (internal method).
-     * This method is called from waitForCondition(BooleanSupplier, Duration)
-     * and it is executed with the lock held.
-     *
-     * @param   fCondition  Represents a supplier of {@code boolean}-valued condition results
-     *                      Callers must call signal()/signalAll() after state changes.
-     *
-     * @param   endOfWait   null means: no timeout
-     *
-     * @return  true == condition met; false == timeout
-     * @throws  InterruptedException
-     */
-    private boolean waitForCondition(final BooleanSupplier fCondition, final Instant endOfWait) throws InterruptedException
-    {
-        //- Always check under lock before awaiting (avoids unnecessary waiting).
-        while (!fCondition.getAsBoolean())
-        {
-            if (endOfWait == null)
-            {
-                getOrCreateCondition().await();
-                continue;
-            }
-            final long remainingNanos = Duration.between(Instant.now(), endOfWait).toNanos();
-            if (remainingNanos <= 0)
-            {
-                return false; // timeout
-            }
-            getOrCreateCondition().awaitNanos(remainingNanos);
-        }
-        return true;
     }
 
 

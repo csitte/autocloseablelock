@@ -230,16 +230,15 @@ public class CloseableLockTest
      * Tests for wait() method, which should be interrupted and throw exception
      */
     @Test
-    public void testWaitInterrupted()
+    public void testWaitInterrupted() throws InterruptedException
     {
         CloseableLock lock = new CloseableLock();
         try (AutoCloseableLock acl = lock.lock())
         {
             ThreadObject thread = new ThreadObject(lock, MODE.WAIT_500MS, null); // wait 500ms
             thread.start();
-            //- Wait (max 500ms) until thread is started
-            boolean status = lock.waitForCondition(()->thread.isStarted(), MS500);
-            assertTrue(status);
+            //- Poll without waitForCondition: nobody signals the started-flag.
+            waitUntilStarted(thread, MS500);
 
             thread.interrupt();
 
@@ -294,6 +293,7 @@ public class CloseableLockTest
             lock.wait(MS100); // block lock for 100ms
             assertThrows(LockException.class, () -> lock.wait(null));
             assertThrows(LockException.class, () -> lock.wait(Duration.ofNanos(0L)));
+            assertThrows(LockException.class, () -> lock.wait(Duration.ofSeconds(-1L)));
         }
     }
 
@@ -441,9 +441,9 @@ public class CloseableLockTest
         private final MODE mode;
 
         private CloseableLock lock;
-        private LockException exception;
-        private boolean started;
-        private boolean finished;
+        private volatile LockException exception;
+        private volatile boolean started;
+        private volatile boolean finished;
         private Duration waitAtEnd;
 
         /**
@@ -526,6 +526,7 @@ public class CloseableLockTest
 
                     case WAIT_500MS:
                         lock.wait(Duration.ofMillis(500));
+                        break;
 
                     default:
                         break;
@@ -540,6 +541,27 @@ public class CloseableLockTest
                 new CloseableLock().wait(waitAtEnd);
             }
             finished = true;
+            signalFinished();
+        }
+
+        /**
+         * Wake up a test thread that awaits {@link #isFinished()} via waitForCondition().
+         * Uses tryLock without waiting: if the lock is held by another thread,
+         * that thread cannot be awaiting the condition, so no signal is needed.
+         */
+        private void signalFinished()
+        {
+            try
+            {
+                try (AutoCloseableLock acl = lock.tryLock(null))
+                {
+                    lock.signalAll();
+                }
+            }
+            catch (LockException x)
+            {
+                // lock is currently held elsewhere; the holder is not awaiting
+            }
         }
     }
 }
