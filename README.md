@@ -17,7 +17,7 @@ Add the following dependency to your `<dependencies>` section in `pom.xml`:
 <dependency>
   <groupId>com.csitte</groupId>
   <artifactId>autocloseablelock</artifactId>
-  <version>1.2</version>
+  <version>1.3</version>
 </dependency>
 ```
 
