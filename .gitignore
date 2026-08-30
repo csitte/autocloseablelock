@@ -5,3 +5,8 @@
 !/local-scripts/README.md
 /.pmd
 /target/
+
+# Claude-Session-Memory: nie in dieses Repo (es ist oeffentlich auf GitHub).
+# Chris' Entscheidung 30.08.2026; die maschinenlokale ~/.config/git/ignore hat dieselbe Regel,
+# reist aber nicht — deshalb steht sie hier zusaetzlich und gilt auf jedem Klon.
+memory/
