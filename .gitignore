@@ -10,3 +10,10 @@
 # Chris' Entscheidung 30.08.2026; die maschinenlokale ~/.config/git/ignore hat dieselbe Regel,
 # reist aber nicht — deshalb steht sie hier zusaetzlich und gilt auf jedem Klon.
 memory/
+
+# Lokale Claude-Session-Dateien: gleiche Linie wie memory/ oben. CLAUDE.md und .session-id
+# nennen Geraete- und Werkzeugpfade dieser Arbeitsumgebung, .claude/ haelt lokale
+# Permission-Regeln — nichts davon gehoert in ein oeffentliches Repo. 31.08.2026.
+/CLAUDE.md
+/.session-id
+/.claude/
